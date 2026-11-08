@@ -285,12 +285,8 @@ def synthesize_whale_and_retail_intelligence(
 ) -> Dict[str, Any]:
     """
     Feeds authentic corporate treasury, ETF proxy, on-chain order flow, and retail sentiment
-    into DeepSeek V3 to generate institutional deduction and retail protective directives.
     """
-    client = OpenAI(
-        api_key=os.environ.get("DEEPSEEK_API_KEY", ""),
-        base_url=os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
-    )
+    from ai_analyst import _call_deepseek_json
 
     ibit = etf_data.get("IBIT", {})
     mstr = etf_data.get("MSTR", {})
@@ -341,20 +337,7 @@ Generate an institutional whale & retail consideration dossier in this exact JSO
 """
 
     try:
-        resp = client.chat.completions.create(
-            model=os.environ.get("DEEPSEEK_MODEL", "deepseek-chat"),
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.25,
-            max_tokens=1500,
-            timeout=25
-        )
-        data = json.loads(resp.choices[0].message.content)
-        data["mode"] = "DEEPSEEK_V3_LIVE"
-        return data
+        return _call_deepseek_json(system_prompt, user_prompt, max_tokens=1500, timeout=25)
     except Exception as e:
         return _fallback_whale_synthesis(coin_symbol, coin_price, treasury_data, etf_data, retail_flow, fng_data, divergence, str(e))
 

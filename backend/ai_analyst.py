@@ -10,15 +10,77 @@ import os
 import json
 import time
 from typing import Dict, Any, List, Optional
+import requests
 from openai import OpenAI
 
-DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
-DEEPSEEK_BASE_URL = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
-DEEPSEEK_MODEL = os.environ.get("DEEPSEEK_MODEL", "deepseek-chat")
+def get_api_key() -> str:
+    return os.environ.get("DEEPSEEK_API_KEY", "").strip()
+
+def get_base_url() -> str:
+    return os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com").strip().rstrip("/")
+
+def get_model() -> str:
+    return os.environ.get("DEEPSEEK_MODEL", "deepseek-chat").strip()
 
 def get_client() -> OpenAI:
-    return OpenAI(api_key=DEEPSEEK_API_KEY, base_url=DEEPSEEK_BASE_URL)
+    return OpenAI(api_key=get_api_key(), base_url=get_base_url())
 
+def _call_deepseek_json(system_prompt: str, user_prompt: str, max_tokens: int = 1800, timeout: int = 25) -> Dict[str, Any]:
+    api_key = get_api_key()
+    base_url = get_base_url()
+    model = get_model()
+
+    if not api_key:
+        raise ValueError("DEEPSEEK_API_KEY not configured")
+
+    # 1. Primary: OpenAI client with sanitized parameters
+    try:
+        client = OpenAI(api_key=api_key, base_url=base_url)
+        resp = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.25,
+            max_tokens=max_tokens,
+            timeout=timeout
+        )
+        data = json.loads(resp.choices[0].message.content)
+        data["mode"] = "DEEPSEEK_V3_LIVE"
+        return data
+    except Exception as e_primary:
+        # 2. Resilient fallback: direct requests to bypass any local httpx transport issues on serverless
+        try:
+            r = requests.post(
+                f"{base_url}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": model,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    "response_format": {"type": "json_object"},
+                    "temperature": 0.25,
+                    "max_tokens": max_tokens
+                },
+                timeout=timeout
+            )
+            if r.status_code == 200:
+                raw_json = r.json()
+                content = raw_json["choices"][0]["message"]["content"]
+                data = json.loads(content)
+                data["mode"] = "DEEPSEEK_V3_LIVE"
+                return data
+            else:
+                raise RuntimeError(f"DeepSeek HTTP {r.status_code}: {r.text[:120]}")
+        except Exception as e_secondary:
+            raise RuntimeError(f"OpenAI error ({e_primary}) & requests error ({e_secondary})")
 # ── 1. NEWS & GEOPOLITICAL HYPOTHESIS & VERDICT (SECTION 2) ───────────────────
 def generate_news_hypothesis_and_verdict(
     coin_name: str,
@@ -112,21 +174,7 @@ Generate a high-density, bulleted quantitative intelligence dossier in this exac
 """
 
     try:
-        client = get_client()
-        resp = client.chat.completions.create(
-            model=DEEPSEEK_MODEL,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.25,
-            max_tokens=1800,
-            timeout=25
-        )
-        data = json.loads(resp.choices[0].message.content)
-        data["mode"] = "DEEPSEEK_V3_LIVE"
-        return data
+        return _call_deepseek_json(system_prompt, user_prompt, max_tokens=1800, timeout=25)
     except Exception as e:
         return _fallback_news_hypothesis(coin_name, coin_symbol, news_data, price_usd, reason=str(e))
 
@@ -241,21 +289,7 @@ Generate an exhaustive, dense, bullet-point intelligence dossier in this exact J
 """
 
     try:
-        client = get_client()
-        resp = client.chat.completions.create(
-            model=DEEPSEEK_MODEL,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.25,
-            max_tokens=2600,
-            timeout=30
-        )
-        data = json.loads(resp.choices[0].message.content)
-        data["mode"] = "DEEPSEEK_V3_LIVE"
-        return data
+        return _call_deepseek_json(system_prompt, user_prompt, max_tokens=2600, timeout=30)
     except Exception as e:
         return _fallback_psychology_memo(coin_name, coin_symbol, stats, fng, news_data, drawdown_data, reason=str(e))
 

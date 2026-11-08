@@ -117,9 +117,10 @@ def get_health():
         "terminal": "TELLIN Crypto Quantitative Intelligence Terminal",
         "version": "1.0.0",
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
-        "ai_model": ai_analyst.DEEPSEEK_MODEL,
-        "ai_configured": bool(ai_analyst.DEEPSEEK_API_KEY)
+        "ai_model": ai_analyst.get_model(),
+        "ai_configured": bool(ai_analyst.get_api_key())
     }
+
 
 @app.get("/api/tv-validate")
 async def validate_tv_symbol(symbol: str = Query(..., description="Coin symbol or trading pair")):
@@ -268,7 +269,8 @@ async def get_news_hypothesis(symbol: str):
         },
         "hypothesis": hypothesis_data
     }
-    set_endpoint_cache(cache_key, res)
+    if hypothesis_data.get("mode") == "DEEPSEEK_V3_LIVE":
+        set_endpoint_cache(cache_key, res)
     return res
 
 @app.get("/api/drawdowns/{symbol}")
@@ -332,7 +334,8 @@ async def get_deep_ai_memo(symbol: str):
         },
         "memorandum": memo
     }
-    set_endpoint_cache(cache_key, res)
+    if memo.get("mode") == "DEEPSEEK_V3_LIVE":
+        set_endpoint_cache(cache_key, res)
     return res
 @app.get("/api/insider-whales/{symbol}")
 async def get_insider_whale_intel(symbol: str):
