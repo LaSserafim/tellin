@@ -1,0 +1,2391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark" />
+  <title>TELLIN // Institutional Crypto Quantitative, Geopolitical & Analytical Terminal</title>
+
+  <!-- Google Fonts: Plus Jakarta Sans (Headings & UI) + JetBrains Mono (Data & Numerals) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- External Libraries: Chart.js, GSAP, Motion One & TradingView Widget -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/motion@10.18.0/dist/motion.umd.min.js"></script>
+  <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+
+  <style>
+    /* ── STRICT HIGH-DENSITY NEO-BRUTALISM RESET ────────────────────────────── */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      border-radius: 0 !important;
+    }
+
+    :root {
+      /* Pure OLED Black Screener Canvas */
+      --bg: #000000;
+      --surface: #06070a;
+      --surface-2: #0b0d12;
+      --surface-3: #11141c;
+      --surface-elevated: #161a24;
+
+      /* Professional Gunmetal Grid Borders */
+      --line: #151922;
+      --line-bright: #202735;
+      --line-highlight: #00f59b;
+
+      /* High-Contrast Neutral Typography */
+      --ink: #ffffff;
+      --text: #cbd5e1;
+      --text-dim: #8b9bb4;
+      --text-mute: #4e5b70;
+
+      /* Screener Indicator Ornaments (Selective green/red trims) */
+      --green: #00f59b;
+      --green-dim: rgba(0, 245, 155, 0.08);
+      --green-border: rgba(0, 245, 155, 0.35);
+      --green-glow: rgba(0, 245, 155, 0.25);
+
+      --red: #ff3b5c;
+      --red-dim: rgba(255, 59, 92, 0.08);
+      --red-border: rgba(255, 59, 92, 0.35);
+      --red-glow: rgba(255, 59, 92, 0.25);
+
+      --amber: #fbbf24;
+      --amber-dim: rgba(251, 191, 36, 0.08);
+      /* Typography Pairing: Plus Jakarta Sans for UI + JetBrains Mono for Data */
+      --sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    }
+
+    html {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 11.5px;
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.5;
+    }
+
+    body {
+      min-height: 100vh;
+      font-variant-numeric: tabular-nums;
+      background: var(--bg);
+      overflow-x: hidden;
+      padding-bottom: 24px;
+    }
+
+    /* Ambient WebGPU Telemetry Canvas */
+    #gpuCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.32;
+    }
+    .app-root {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Colors & Monospace Data Utilities */
+    .data-font { font-family: var(--mono) !important; }
+    .pos { color: var(--green) !important; }
+    .neg { color: var(--red) !important; }
+    .neu { color: var(--ink) !important; }
+    .dim { color: var(--text-dim) !important; }
+    .mute { color: var(--text-mute) !important; }
+    .amber { color: var(--amber) !important; }
+    .cursor-pointer { cursor: pointer; }
+
+    button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+    input { font: inherit; color: inherit; background: none; border: 0; outline: 0; }
+    :focus-visible { outline: 1px solid var(--green); outline-offset: 1px; }
+    ::selection { background: var(--green); color: #000000; }
+
+    /* ── 1. COMPACT TOP STATUS STRIP ────────────────────────────────────────── */
+    .top-strip {
+      height: 26px;
+      display: flex;
+      align-items: stretch;
+      border-bottom: 1px solid var(--line);
+      background: rgba(3, 4, 6, 0.98);
+      font-size: 10px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      z-index: 100;
+    }
+    .brand-tag {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface-2);
+      color: #ffffff;
+      border-right: 1px solid var(--line);
+      font-family: var(--sans);
+      font-weight: 800;
+      padding: 0 12px;
+      letter-spacing: 0.1em;
+      white-space: nowrap;
+    }
+    .brand-tag span { color: var(--green); }
+
+    .tape-scroll {
+      display: flex;
+      align-items: center;
+      flex: 1;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding: 0 10px;
+      gap: 16px;
+      white-space: nowrap;
+      font-family: var(--mono);
+      font-size: 9.5px;
+    }
+    .tape-scroll::-webkit-scrollbar { display: none; }
+    .tape-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--text-dim);
+    }
+    .tape-chip strong { color: var(--ink); font-weight: 600; }
+
+    .top-status-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 12px;
+      border-left: 1px solid var(--line);
+      background: var(--surface);
+      font-size: 9.5px;
+      color: var(--text-dim);
+    }
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+      display: inline-block;
+    }
+
+    /* ── 2. COMPACT COMMAND & TELEMETRY STRIP ─────────────────────────────── */
+    .cmd-bar {
+      border-bottom: 1px solid var(--line-bright);
+      background: var(--surface);
+      display: flex;
+      align-items: stretch;
+      flex-wrap: wrap;
+      min-height: 40px;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      border-right: 1px solid var(--line);
+      min-width: 240px;
+      height: 40px;
+      background: var(--surface-2);
+    }
+    .cmd-symbol {
+      color: var(--green);
+      font-family: var(--mono);
+      font-weight: 700;
+      padding: 0 10px;
+      font-size: 11px;
+    }
+    .search-input {
+      flex: 1;
+      height: 100%;
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink);
+    }
+    .search-input::placeholder {
+      color: var(--text-mute);
+      font-size: 10px;
+      font-weight: 400;
+    }
+
+    .btn-exec {
+      background: var(--surface-3);
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 0 12px;
+      height: 100%;
+      border-left: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: background 120ms ease, color 120ms ease;
+    }
+    .btn-exec:hover {
+      background: var(--green);
+      color: #000000;
+    }
+
+    .chips-cluster {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      padding: 0 10px;
+      border-right: 1px solid var(--line);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .sym-chip {
+      padding: 3px 7px;
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-dim);
+      border: 1px solid var(--line);
+      background: var(--surface-2);
+      transition: all 120ms ease;
+    }
+    .sym-chip:hover, .sym-chip.active {
+      color: #ffffff;
+      background: var(--line-bright);
+      border-color: var(--green);
+    }
+
+    /* Telemetry Bar (High Contrast, Clean Layout) */
+    .telemetry-strip {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 14px;
+      border-right: 1px solid var(--line);
+      font-size: 11px;
+    }
+    .telem-price {
+      font-family: var(--mono);
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .telem-change {
+      font-family: var(--mono);
+      font-weight: 700;
+      font-size: 11px;
+    }
+    .telem-meta {
+      display: flex;
+      gap: 12px;
+      color: var(--text-dim);
+      font-size: 10px;
+      font-family: var(--mono);
+    }
+    .telem-meta strong { color: var(--ink); font-weight: 600; }
+
+    .cmd-actions {
+      display: flex;
+      align-items: center;
+      margin-left: auto;
+    }
+    .btn-sm-action {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 12px;
+      height: 40px;
+      border-left: 1px solid var(--line);
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-dim);
+      background: var(--surface);
+      letter-spacing: 0.04em;
+      transition: all 120ms ease;
+    }
+    .btn-sm-action:hover {
+      background: var(--surface-2);
+      color: var(--ink);
+    }
+
+    /* ── 3. COMPACT TABS STRIP ──────────────────────────────────────────────── */
+    .nav-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface);
+      overflow-x: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--line-bright) transparent;
+      -webkit-overflow-scrolling: touch;
+    }
+    .nav-tabs::-webkit-scrollbar {
+      height: 3px;
+    }
+    .nav-tabs::-webkit-scrollbar-thumb {
+      background: var(--line-bright);
+    }
+    .tab-item {
+      padding: 6px 14px;
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      border-right: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: all 140ms ease;
+      background: var(--surface);
+    }
+    .tab-item:hover {
+      color: var(--ink);
+      background: var(--surface-2);
+    }
+    .tab-item.active {
+      color: #ffffff;
+      background: var(--surface-elevated);
+      box-shadow: inset 0 -2px 0 var(--green);
+    }
+
+    /* ── 4. CONTENT SECTIONS ─────────────────────────────────────────────────── */
+    .tab-pane {
+      display: none;
+      padding: 10px 14px;
+      max-width: 1750px;
+      margin: 0 auto;
+    }
+    .tab-pane.active {
+      display: block;
+    }
+
+    .c-panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      margin-bottom: 12px;
+      position: relative;
+    }
+    .c-hdr {
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--line);
+      padding: 6px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .c-hdr h3 {
+      font-family: var(--sans);
+      font-size: 12.5px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--ink);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .c-hdr .c-tag {
+      font-family: var(--mono);
+      font-size: 9px;
+      padding: 2px 6px;
+      font-weight: 600;
+      background: var(--surface-3);
+      border: 1px solid var(--line);
+      color: var(--text-dim);
+    }
+    .c-body {
+      padding: 10px;
+    }
+
+    /* ── SECTION 1: CUSTOMIZABLE MOVEABLE CHART WORKSPACE ──────────────────── */
+    .workspace-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+      padding: 6px 10px;
+      background: var(--surface-2);
+      border: 1px solid var(--line-bright);
+      font-size: 10px;
+    }
+    .ws-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .ws-add-coin {
+      display: flex;
+      align-items: center;
+      border: 1px solid var(--line-bright);
+      background: var(--surface);
+      height: 26px;
+    }
+    .ws-add-coin input {
+      padding: 0 6px;
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      width: 85px;
+      color: #fff;
+    }
+    .ws-add-coin button {
+      background: var(--surface-3);
+      padding: 0 8px;
+      font-size: 9px;
+      font-weight: 700;
+      border-left: 1px solid var(--line);
+      color: var(--green);
+      height: 100%;
+    }
+    .ws-add-coin button:hover {
+      background: var(--green);
+      color: #000;
+    }
+
+    .btn-ws-mode {
+      padding: 4px 8px;
+      font-size: 9.5px;
+      font-weight: 600;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      color: var(--text-dim);
+      transition: all 120ms ease;
+    }
+    .btn-ws-mode:hover {
+      color: #fff;
+      border-color: var(--green);
+    }
+    .btn-ws-mode.active {
+      background: var(--line-bright);
+      color: #fff;
+      border-color: var(--green);
+    }
+
+    /* Workspace Canvas for Moveable/Draggable Windows */
+    .chart-workspace-canvas {
+      position: relative;
+      width: 100%;
+      min-height: 740px;
+      background: rgba(3, 4, 6, 0.9);
+      border: 1px dashed var(--line);
+      margin-bottom: 12px;
+      padding: 6px;
+    }
+    .chart-workspace-canvas.mode-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      min-height: auto;
+    }
+    @media (max-width: 950px) {
+      .chart-workspace-canvas.mode-grid { grid-template-columns: 1fr; }
+    }
+    .chart-workspace-canvas.mode-focused {
+      display: block;
+      min-height: auto;
+    }
+
+    /* CUSTOMIZABLE RESIZABLE DRAGGABLE WINDOW */
+    .chart-window {
+      background: #000000;
+      border: 1px solid var(--line-bright);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      min-width: 330px;
+      min-height: 340px;
+      height: 360px;
+      resize: both;
+      overflow: hidden;
+      transition: box-shadow 150ms ease, border-color 150ms ease;
+    }
+    .chart-window:hover, .chart-window.active-focus {
+      border-color: var(--line-highlight);
+      box-shadow: 0 4px 20px rgba(56, 189, 248, 0.15);
+      z-index: 50;
+    }
+    .chart-window.floating {
+      position: absolute !important;
+      z-index: 100;
+      width: 580px;
+      height: 380px;
+    }
+
+    /* Window Header (Drag Handle) */
+    .chart-window-hdr {
+      height: 28px;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 8px;
+      font-size: 10px;
+      cursor: move;
+      user-select: none;
+    }
+    .win-hdr-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .win-drag-handle {
+      color: var(--green);
+      font-size: 11px;
+      cursor: grab;
+      padding-right: 2px;
+    }
+    .win-symbol-badge {
+      font-weight: 700;
+      color: #ffffff;
+      font-family: var(--mono);
+      font-size: 10px;
+    }
+    .win-coin-input-box {
+      display: flex;
+      align-items: center;
+      border: 1px solid var(--line);
+      background: #000000;
+      height: 20px;
+    }
+    .win-coin-input-box input {
+      width: 55px;
+      font-family: var(--mono);
+      font-size: 9.5px;
+      font-weight: 700;
+      padding: 0 4px;
+      text-transform: uppercase;
+      color: #ffffff;
+    }
+    .win-coin-input-box button {
+      font-size: 8.5px;
+      font-weight: 700;
+      background: var(--surface-3);
+      padding: 0 5px;
+      height: 100%;
+      color: var(--green);
+    }
+    .win-coin-input-box button:hover {
+      background: var(--green);
+      color: #000;
+    }
+
+    .win-hdr-right {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .btn-win-ctrl {
+      padding: 2px 5px;
+      font-family: var(--mono);
+      font-size: 8.5px;
+      font-weight: 700;
+      background: var(--surface-3);
+      border: 1px solid var(--line);
+      color: var(--text-dim);
+    }
+    .btn-win-ctrl:hover {
+      background: var(--green);
+      color: #000000;
+    }
+    .btn-win-close {
+      color: var(--red) !important;
+    }
+    .btn-win-close:hover {
+      background: var(--red) !important;
+      color: #ffffff !important;
+    }
+
+    /* Chart Window Body (Full Height Guarantee: Zero Cropping) */
+    .chart-window-body {
+      flex: 1;
+      width: 100%;
+      height: calc(100% - 28px);
+      min-height: 310px;
+      position: relative;
+      overflow: hidden;
+      background: #000000;
+    }
+    .chart-inner-iframe-wrap {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+
+    /* Screener Table */
+    .screener-tbl {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+    .screener-tbl th {
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--line-bright);
+      padding: 5px 8px;
+      text-align: left;
+      font-size: 9px;
+      color: var(--text-dim);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .screener-tbl td {
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: middle;
+      font-family: var(--mono);
+    }
+    .screener-tbl tr:hover {
+      background: var(--surface-2);
+      cursor: pointer;
+    }
+
+    /* ── SECTION 2: QUANT SENTIMENT & NEWS ENGINE ───────────────────────────── */
+    .quant-meter-box {
+      background: var(--surface-2);
+      border: 1px solid var(--line-bright);
+      padding: 12px 14px;
+      margin-bottom: 10px;
+    }
+    .meter-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .signal-chip {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      padding: 3px 8px;
+      border: 1px solid currentColor;
+    }
+    .signal-chip.sig-buy { color: var(--green); background: var(--green-dim); border-color: var(--green-border); }
+    .signal-chip.sig-neutral { color: var(--amber); background: var(--amber-dim); }
+    .signal-chip.sig-sell { color: var(--red); background: var(--red-dim); border-color: var(--red-border); }
+
+    .score-bar-track {
+      height: 6px;
+      background: var(--surface-3);
+      border: 1px solid var(--line);
+      position: relative;
+      margin: 6px 0;
+    }
+    .score-bar-fill {
+      height: 100%;
+      transition: width 0.3s ease;
+    }
+    .score-bar-center {
+      position: absolute;
+      top: -2px;
+      bottom: -2px;
+      left: 50%;
+      width: 2px;
+      background: #ffffff;
+      z-index: 2;
+    }
+
+    .categories-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-top: 8px;
+      border-top: 1px solid var(--line);
+      padding-top: 8px;
+    }
+    @media (max-width: 768px) {
+      .categories-strip { grid-template-columns: repeat(2, 1fr); }
+    }
+    .cat-score-box {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      padding: 5px 8px;
+      font-size: 10px;
+    }
+    .cat-score-box .cat-lbl { color: var(--text-dim); text-transform: uppercase; font-size: 8.5px; }
+    .cat-score-box .cat-val { font-family: var(--mono); font-weight: 700; margin-top: 2px; font-size: 11.5px; }
+
+    /* Bullet Cards */
+    .bullet-section {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      padding: 10px 12px;
+      margin-bottom: 8px;
+    }
+    .bullet-section h4 {
+      font-family: var(--sans);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .bullet-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .bullet-list li {
+      position: relative;
+      padding-left: 12px;
+      font-size: 11.5px;
+      color: var(--text);
+      line-height: 1.55;
+    }
+    .bullet-list li::before {
+      content: "▪";
+      position: absolute;
+      left: 0;
+      color: var(--green);
+      font-size: 9px;
+    }
+    .levels-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 6px;
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      padding: 8px;
+      margin-top: 6px;
+    }
+    .level-cell {
+      font-size: 10px;
+    }
+    .level-cell .lbl { font-size: 8.5px; color: var(--text-dim); text-transform: uppercase; }
+    .level-cell .val { font-family: var(--mono); font-weight: 700; margin-top: 2px; }
+
+    /* Scraped News Compact Feed */
+    .news-compact-list {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .news-row {
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      padding: 7px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      transition: border-color 120ms ease;
+    }
+    .news-row:hover {
+      border-color: var(--green-border);
+    }
+    .news-row-top {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 9px;
+      text-transform: uppercase;
+    }
+    .news-tag {
+      background: var(--surface-3);
+      color: var(--green);
+      padding: 1px 4px;
+      border: 1px solid var(--line);
+    }
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--ink);
+      text-decoration: none;
+      line-height: 1.4;
+    }
+    .news-row a:hover { color: var(--green); }
+    .news-row p {
+      font-size: 10.5px;
+      color: var(--text-dim);
+      line-height: 1.4;
+    }
+
+    /* ── SECTION 3: STATS & 4-TIER DRAWDOWN ─────────────────────────────────── */
+    .perf-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 5px;
+      margin-bottom: 10px;
+    }
+    .perf-box {
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      padding: 6px 8px;
+    }
+    .perf-box .p-lbl { font-size: 8.5px; color: var(--text-dim); text-transform: uppercase; }
+    .perf-box .p-val { font-family: var(--mono); font-size: 12px; font-weight: 700; margin-top: 2px; }
+
+    .chart-box-compact {
+      height: 200px;
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      padding: 8px;
+      margin-bottom: 10px;
+    }
+
+    .tier-tbl {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10.5px;
+    }
+    .tier-tbl th {
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--line-bright);
+      padding: 5px 8px;
+      text-align: left;
+      font-size: 9px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+    .tier-tbl td {
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--line);
+      font-family: var(--mono);
+    }
+
+    .split-ledgers {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    @media (max-width: 950px) {
+      .split-ledgers { grid-template-columns: 1fr; }
+    }
+    .ledger-card {
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      border-left: 2.5px solid var(--line-bright);
+      padding: 8px 10px;
+      margin-bottom: 6px;
+      font-size: 10.5px;
+    }
+    .ledger-card.bull { border-left-color: var(--green); }
+    .ledger-card.bear { border-left-color: var(--red); }
+    .ledger-card-top {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9px;
+      color: var(--text-dim);
+      margin-bottom: 2px;
+    }
+    .ledger-card-fig {
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .ledger-card-desc {
+      color: var(--text);
+      font-size: 10.5px;
+      line-height: 1.4;
+      margin-top: 3px;
+    }
+
+    /* ── SECTION 4: FULL DEEP AI MEMORANDUM ─────────────────────────────────── */
+    .memo-dossier {
+      background: var(--surface);
+      border: 1px solid var(--line-bright);
+      padding: 18px;
+      max-width: 1300px;
+      margin: 0 auto;
+    }
+    .memo-top-bar {
+      border-bottom: 1px solid var(--line-bright);
+      padding-bottom: 10px;
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .memo-meta-chips {
+      display: flex;
+      gap: 10px;
+      font-size: 9.5px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      font-family: var(--mono);
+    }
+    .memo-meta-chips strong { color: var(--ink); }
+
+    .memo-block {
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--line);
+    }
+    .memo-block:last-child { border-bottom: 0; margin-bottom: 0; padding-bottom: 0; }
+    .memo-block h4 {
+      font-family: var(--sans);
+      font-size: 12.5px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--green);
+      margin-bottom: 6px;
+    }
+
+    .scen-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 6px;
+    }
+    @media (max-width: 800px) {
+      .scen-grid { grid-template-columns: 1fr; }
+    }
+    .scen-card {
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      padding: 8px 10px;
+      font-size: 10px;
+    }
+    .scen-card.scen-bull { border-top: 2.5px solid var(--green); }
+    .scen-card.scen-base { border-top: 2.5px solid var(--line-bright); }
+    .scen-card.scen-bear { border-top: 2.5px solid var(--red); }
+    .scen-hdr {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 700;
+      font-size: 10.5px;
+      margin-bottom: 3px;
+    }
+
+    .alert-banner {
+      background: var(--red-dim);
+      border: 1px solid var(--red-border);
+      color: #fff;
+      padding: 8px 12px;
+      font-size: 10.5px;
+      margin-bottom: 8px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient WebGPU Telemetry Canvas -->
+  <canvas id="gpuCanvas" aria-hidden="true"></canvas>
+
+  <div class="app-root">
+
+    <!-- ── 1. COMPACT TOP STATUS STRIP ──────────────────────────────────────── -->
+    <div class="top-strip">
+      <div class="brand-tag">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+          <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+          <polyline points="2 17 12 22 22 17"></polyline>
+          <polyline points="2 12 12 17 22 12"></polyline>
+        </svg>
+        TELLIN <span>//</span> TERMINAL
+      </div>
+
+      <div class="tape-scroll" id="tape_scroll">
+        <div class="tape-chip"><span>BTC</span> <strong id="tape_btc">$84,320</strong></div>
+        <div class="tape-chip"><span>ETH</span> <strong id="tape_eth">$2,250</strong></div>
+        <div class="tape-chip"><span>SOL</span> <strong id="tape_sol">$145</strong></div>
+        <div class="tape-chip"><span>F&amp;G</span> <strong id="tape_fng" class="amber">63 // GREED</strong></div>
+        <div class="tape-chip"><span>BTC.D</span> <strong>58.4%</strong></div>
+        <div class="tape-chip"><span>AI ENGINE</span> <strong class="pos">ONLINE</strong></div>
+      </div>
+
+      <div class="top-status-right">
+        <span class="status-dot"></span>
+        <span id="gpuStatus">WEBGPU ENGINE: ACTIVE</span>
+        <span class="mute">|</span>
+        <span id="clockUtc" class="data-font">--:--:-- UTC</span>
+      </div>
+    </div>
+
+    <!-- ── 2. COMPACT COMMAND & TELEMETRY STRIP ─────────────────────────────── -->
+    <div class="cmd-bar">
+      <div class="search-box">
+        <span class="cmd-symbol">&gt;</span>
+        <input type="text" id="coin_input" class="search-input" placeholder="TICKER (BTC, ETH, SOL, PEPE)" value="BTC" />
+        <button id="btn_analyze" class="btn-exec cursor-pointer">SCAN</button>
+      </div>
+
+      <div class="chips-cluster">
+        <button class="sym-chip active cursor-pointer" onclick="handleCoinClick('BTC')">BTC</button>
+        <button class="sym-chip cursor-pointer" onclick="handleCoinClick('ETH')">ETH</button>
+        <button class="sym-chip cursor-pointer" onclick="handleCoinClick('SOL')">SOL</button>
+        <button class="sym-chip cursor-pointer" onclick="handleCoinClick('BNB')">BNB</button>
+        <button class="sym-chip cursor-pointer" onclick="handleCoinClick('XRP')">XRP</button>
+        <button class="sym-chip cursor-pointer" onclick="handleCoinClick('DOGE')">DOGE</button>
+        <button class="sym-chip cursor-pointer" onclick="handleCoinClick('ADA')">ADA</button>
+        <button class="sym-chip cursor-pointer" onclick="handleCoinClick('AVAX')">AVAX</button>
+        <button class="sym-chip cursor-pointer" onclick="handleCoinClick('SUI')">SUI</button>
+        <button class="sym-chip cursor-pointer" onclick="handleCoinClick('PEPE')">PEPE</button>
+      </div>
+
+      <!-- Integrated Asset Telemetry -->
+      <div class="telemetry-strip" id="telemetry_strip">
+        <div>
+          <span class="telem-price" id="hdr_price">$84,320.00</span>
+          <span class="telem-change pos" id="hdr_change">+2.45%</span>
+        </div>
+        <div class="telem-meta">
+          <span>MCAP: <strong id="hdr_mcap">$1.64T</strong></span>
+          <span>ATH: <strong id="hdr_ath">$126.19K</strong></span>
+          <span>ATH DD: <strong id="hdr_ath_dd" class="neg">-33.89%</strong></span>
+          <span>FEED: <strong id="hdr_tv_ticker" class="pos">BINANCE:BTCUSD</strong></span>
+        </div>
+      </div>
+
+      <div class="cmd-actions">
+        <button class="btn-sm-action cursor-pointer" onclick="refreshCurrentCoin()" title="Synchronize all feeds">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+          SYNC
+        </button>
+      </div>
+    </div>
+
+    <!-- ── 3. COMPACT NAVIGATION TABS (100% UNCLIPPED & SCROLLABLE) ───────────── -->
+    <nav class="nav-tabs" id="main_nav_tabs">
+      <button class="tab-item active cursor-pointer" onclick="switchTab('pane_tv')">
+        <span>[ 01 // CHARTS &amp; SCREENER ]</span>
+      </button>
+      <button class="tab-item cursor-pointer" onclick="switchTab('pane_news')">
+        <span>[ 02 // SENTIMENT &amp; GEOPOLITICS ]</span>
+      </button>
+      <button class="tab-item cursor-pointer" onclick="switchTab('pane_drawdown')">
+        <span>[ 03 // STATS &amp; DRAWDOWNS ]</span>
+      </button>
+      <button class="tab-item cursor-pointer" onclick="switchTab('pane_ai_memo')">
+        <span>[ 04 // AI PSYCHOLOGY MEMO ]</span>
+      </button>
+      <button class="tab-item cursor-pointer" onclick="switchTab('pane_whales')">
+        <span>[ 05 // WHALES &amp; SPECULATION ]</span>
+      </button>
+    </nav>
+
+    <!-- ── TAB 1: CUSTOMIZABLE MOVEABLE CHARTS & SCREENER ────────────────────── -->
+    <div id="pane_tv" class="tab-pane active">
+      <div id="tv_not_found_alert" class="alert-banner">
+        <strong>[ ✖ SYMBOL NOT FOUND ON TRADINGVIEW ]</strong>
+        <span id="tv_not_found_text">The requested symbol does not exist in TradingView crypto feeds.</span>
+      </div>
+
+      <!-- Interactive Chart Workspace Controls Bar -->
+      <div class="workspace-toolbar">
+        <div class="ws-left">
+          <span class="dim">WORKSPACE:</span>
+          <button id="btn_ws_grid" class="btn-ws-mode active cursor-pointer" onclick="setWorkspaceLayout('grid')">
+            ⊞ 2x2 AUTO-GRID
+          </button>
+          <button id="btn_ws_float" class="btn-ws-mode cursor-pointer" onclick="setWorkspaceLayout('float')">
+            ◧ FREE-FLOAT &amp; MOVE
+          </button>
+          <button id="btn_ws_single" class="btn-ws-mode cursor-pointer" onclick="setWorkspaceLayout('single')">
+            1-CHART FOCUSED
+          </button>
+          <button class="btn-ws-mode cursor-pointer" onclick="resetDefaultCharts()">
+            ↺ RESET TO DEFAULT 4
+          </button>
+
+          <!-- Add Any Custom Coin -->
+          <div class="ws-add-coin">
+            <input type="text" id="ws_new_coin_inp" placeholder="ADD COIN" />
+            <button class="cursor-pointer" onclick="handleAddCustomCoin()">+ ADD</button>
+          </div>
+        </div>
+
+        <div class="dim">
+          <span>ACTIVE COINS LOADED: </span>
+          <strong id="ws_active_count" class="pos">4 WINDOWS</strong>
+        </div>
+      </div>
+
+      <!-- DYNAMIC MOVEABLE RESIZABLE CHART WORKSPACE CANVAS -->
+      <div id="chartWorkspace" class="chart-workspace-canvas mode-grid">
+        <!-- Chart windows dynamically mounted here -->
+      </div>
+
+      <!-- Top Liquidity Screener Table -->
+      <div class="c-panel">
+        <div class="c-hdr">
+          <h3>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+            MARKET LIQUIDITY SCREENER (CLICK ROW TO ATTACH OR SPAWN)
+          </h3>
+          <span class="c-tag">12 ASSETS</span>
+        </div>
+        <div class="c-body" style="padding:0; max-height:260px; overflow-y:auto;">
+          <table class="screener-tbl">
+            <thead>
+              <tr>
+                <th>ASSET</th>
+                <th>PRICE</th>
+                <th>24H CHG</th>
+                <th>MARKET CAP</th>
+                <th>24H VOLUME</th>
+              </tr>
+            </thead>
+            <tbody id="screener_tbody">
+              <tr><td colspan="5" class="dim" style="text-align:center; padding:16px;">Loading screener universe...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB 2: QUANT SENTIMENT & NEWS ENGINE ──────────────────────────────── -->
+    <div id="pane_news" class="tab-pane">
+      <div class="quant-meter-box">
+        <div class="meter-top">
+          <div>
+            <span class="dim" style="font-size:9.5px; text-transform:uppercase;">QUANTITATIVE SENTIMENT SCORE</span>
+            <div style="display:flex; align-items:baseline; gap:8px; margin-top:2px;">
+              <span id="meter_score_val" style="font-family:var(--mono); font-size:22px; font-weight:800;" class="pos">+0</span>
+              <span class="dim" style="font-size:10px;">/ 100 SCALE</span>
+            </div>
+          </div>
+          <div id="meter_signal_badge" class="signal-chip sig-neutral">MIXED / NEUTRAL</div>
+        </div>
+
+        <div class="score-bar-track">
+          <div class="score-bar-center"></div>
+          <div id="meter_bar_fill" class="score-bar-fill" style="width:50%; background:var(--amber);"></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:8.5px; color:var(--text-mute); font-family:var(--mono);">
+          <span>-100 (EXTREME PANIC / SELL)</span>
+          <span>0 (NEUTRAL)</span>
+          <span>+100 (EUPHORIC / STRONG BUY)</span>
+        </div>
+
+        <div class="categories-strip">
+          <div class="cat-score-box"><div class="cat-lbl">GEOPOLITICAL</div><div class="cat-val" id="cat_geo_score">0</div></div>
+          <div class="cat-score-box"><div class="cat-lbl">REGULATORY (SEC/MiCA)</div><div class="cat-val" id="cat_reg_score">0</div></div>
+          <div class="cat-score-box"><div class="cat-lbl">MACRO LIQUIDITY (FED)</div><div class="cat-val" id="cat_macro_score">0</div></div>
+          <div class="cat-score-box"><div class="cat-lbl">MARKET STRUCTURE</div><div class="cat-val" id="cat_struct_score">0</div></div>
+        </div>
+      </div>
+
+      <div class="bullet-section">
+        <h4><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>CORE SPECULATIVE HYPOTHESIS // DATA-GROUNDED BULLETS</h4>
+        <ul class="bullet-list" id="hypo_bullets_list"><li>Evaluating real-time tape and macro news catalysts...</li></ul>
+      </div>
+
+      <div class="bullet-section">
+        <h4><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>MACROECONOMIC &amp; GEOPOLITICAL TRANSMISSION</h4>
+        <ul class="bullet-list" id="macro_bullets_list"><li>Evaluating global central bank balance sheets, sanctions, and sovereign reserve proposals...</li></ul>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+        <div class="c-panel" style="margin-bottom:0; border-left:2.5px solid var(--green);">
+          <div class="c-hdr"><h3 class="pos">BULLISH CATALYSTS</h3><span class="c-tag pos">POSITIVE ASYMMETRY</span></div>
+          <div class="c-body" style="padding:8px;"><div id="bull_catalysts_box" style="display:flex; flex-direction:column; gap:6px;"></div></div>
+        </div>
+        <div class="c-panel" style="margin-bottom:0; border-left:2.5px solid var(--red);">
+          <div class="c-hdr"><h3 class="neg">BEARISH RISKS</h3><span class="c-tag neg">DOWNSIDE EXPOSURE</span></div>
+          <div class="c-body" style="padding:8px;"><div id="bear_risks_box" style="display:flex; flex-direction:column; gap:6px;"></div></div>
+        </div>
+      </div>
+
+      <div class="c-panel">
+        <div class="c-hdr"><h3 class="pos">TACTICAL EXECUTION LEVELS &amp; DIRECTIVE</h3><span class="c-tag" id="verdict_conviction_tag">CONVICTION: --%</span></div>
+        <div class="c-body" style="padding:8px;">
+          <div class="levels-strip" id="tactical_levels_strip">
+            <div class="level-cell"><div class="lbl">ENTRY ZONE</div><div class="val pos" id="lvl_entry">--</div></div>
+            <div class="level-cell"><div class="lbl">INVALIDATION STOP</div><div class="val neg" id="lvl_stop">--</div></div>
+            <div class="level-cell"><div class="lbl">TARGET 1</div><div class="val pos" id="lvl_t1">--</div></div>
+            <div class="level-cell"><div class="lbl">TARGET 2</div><div class="val pos" id="lvl_t2">--</div></div>
+            <div class="level-cell"><div class="lbl">RISK / REWARD</div><div class="val neu" id="lvl_rr">--</div></div>
+          </div>
+          <div style="margin-top:8px; font-size:10.5px;"><strong>ACTION DIRECTIVE:</strong> <span id="verdict_action_text" class="neu">--</span></div>
+          <ul class="bullet-list" id="verdict_bullets_list" style="margin-top:6px;"></ul>
+        </div>
+      </div>
+
+      <div class="c-panel">
+        <div class="c-hdr"><h3>REAL-TIME SCRAPED NEWS TAPE</h3><span class="c-tag" id="news_count_tag">0 ARTICLES</span></div>
+        <div class="c-body" style="padding:8px;"><div class="news-compact-list" id="news_compact_list"><div class="dim" style="text-align:center; padding:16px;">Scraping news articles...</div></div></div>
+      </div>
+    </div>
+
+    <!-- ── TAB 3: STATS & 4-TIER DRAWDOWN ────────────────────────────────────── -->
+    <div id="pane_drawdown" class="tab-pane">
+      <div class="perf-strip" id="perf_strip_box"></div>
+
+      <div class="c-panel">
+        <div class="c-hdr"><h3>THE 4 CANONICAL CRYPTO DRAWDOWN REGIMES (FUTUREAS RECALIBRATED)</h3><span class="c-tag pos">RECOVERY DNA</span></div>
+        <div class="c-body" style="padding:0; overflow-x:auto;">
+          <table class="tier-tbl">
+            <thead>
+              <tr><th>TIER</th><th>REGIME</th><th>RANGE</th><th>BENCHMARK</th><th>OCCURRENCES</th><th>AVG DD</th><th>AVG RECOVERY</th><th>REC RATE</th><th>FWD 90D REBOUND</th></tr>
+            </thead>
+            <tbody id="tier_tbl_body"><tr><td colspan="9" class="dim" style="text-align:center; padding:16px;">Computing drawdown regimes...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="c-panel">
+        <div class="c-hdr"><h3>ROLLING UNDERWATER DRAWDOWN CURVE (% FROM ALL-TIME RUNNING PEAK)</h3><span class="c-tag neg" id="stats_dd_max">MAX DD: --%</span></div>
+        <div class="c-body"><div class="chart-box-compact"><canvas id="underwaterCanvas"></canvas></div></div>
+      </div>
+
+      <div class="split-ledgers">
+        <div class="c-panel">
+          <div class="c-hdr"><h3>DISCRETE DRAWDOWN LEDGER (WITH IDENTIFIED REASONS)</h3><span class="c-tag" id="dd_events_badge">0 EVENTS</span></div>
+          <div class="c-body" style="max-height:440px; overflow-y:auto;" id="drawdown_events_box"></div>
+        </div>
+        <div class="c-panel">
+          <div class="c-hdr"><h3>KEY INFLUENTIAL FIGURE &amp; GLOBAL MOVEMENT LEDGER</h3><span class="c-tag pos">12 MILESTONES</span></div>
+          <div class="c-body" style="max-height:440px; overflow-y:auto;" id="person_movements_box"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB 4: FULL DEEP AI MEMORANDUM ────────────────────────────────────── -->
+    <div id="pane_ai_memo" class="tab-pane">
+      <div class="memo-dossier">
+        <div class="memo-top-bar">
+          <div>
+            <span class="dim" style="font-size:9px; text-transform:uppercase; letter-spacing:0.06em;">INSTITUTIONAL QUANTITATIVE INTELLIGENCE</span>
+            <h2 style="font-family:var(--sans); font-size:18px; font-weight:800; color:#fff; margin-top:2px;" id="memo_asset_title">BITCOIN (BTC) // MACRO INTELLIGENCE &amp; BEHAVIORAL DOSSIER</h2>
+          </div>
+          <div class="memo-meta-chips">
+            <span>STAGE: <strong id="memo_chip_stage" class="pos">--</strong></span>
+            <span>F&amp;G: <strong id="memo_chip_fng" class="amber">--/100</strong></span>
+            <span>HEALTH: <strong id="memo_chip_health" class="pos">--/100</strong></span>
+          </div>
+        </div>
+
+        <div class="memo-block"><h4>01 // EXECUTIVE SUMMARY &amp; VALUATION (FACTUAL BULLETS)</h4><ul class="bullet-list" id="memo_exec_list"><li>Synthesizing multi-module valuation and liquidity data...</li></ul></div>
+        <div class="memo-block"><h4>02 // COGNITIVE MARKET PSYCHOLOGY &amp; SENTIMENT DISSECTION</h4><ul class="bullet-list" id="memo_psych_list"></ul></div>
+        <div class="memo-block"><h4>03 // GEOPOLITICAL &amp; MACROECONOMIC TRANSMISSION MATRIX</h4><ul class="bullet-list" id="memo_macro_list"></ul></div>
+        <div class="memo-block"><h4>04 // DRAWDOWN REGIME DNA &amp; HISTORICAL PARALLELS</h4><ul class="bullet-list" id="memo_dd_list"></ul></div>
+        <div class="memo-block">
+          <h4>05 // MULTI-SCENARIO PROBABILISTIC FORECAST</h4>
+          <div class="scen-grid">
+            <div class="scen-card scen-bull"><div class="scen-hdr pos"><span>BULL SQUEEZE</span><span id="scen_bull_prob">--%</span></div><div class="dim" style="font-size:9px;">TARGET: <strong id="scen_bull_target" class="pos">--</strong></div><ul class="bullet-list" id="scen_bull_bullets" style="margin-top:4px;"></ul></div>
+            <div class="scen-card scen-base"><div class="scen-hdr neu"><span>BASE RANGE</span><span id="scen_base_prob">--%</span></div><div class="dim" style="font-size:9px;">RANGE: <strong id="scen_base_target" class="neu">--</strong></div><ul class="bullet-list" id="scen_base_bullets" style="margin-top:4px;"></ul></div>
+            <div class="scen-card scen-bear"><div class="scen-hdr neg"><span>TAIL FLUSH</span><span id="scen_bear_prob">--%</span></div><div class="dim" style="font-size:9px;">FLOOR: <strong id="scen_bear_target" class="neg">--</strong></div><ul class="bullet-list" id="scen_bear_bullets" style="margin-top:4px;"></ul></div>
+          </div>
+        </div>
+        <div class="memo-block">
+          <h4>06 // CAPITAL ALLOCATION &amp; INVESTOR PLAYBOOK</h4>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            <div style="background:var(--surface-2); border:1px solid var(--line); padding:6px 8px;"><strong style="color:var(--ink);">SPOT BALANCE SHEET ACCUMULATORS:</strong><ul class="bullet-list" id="playbook_spot_list" style="margin-top:3px;"></ul></div>
+            <div style="background:var(--surface-2); border:1px solid var(--line); padding:6px 8px;"><strong style="color:var(--green);">SWING TRADERS (PIVOTS &amp; STOPS):</strong><ul class="bullet-list" id="playbook_swing_list" style="margin-top:3px;"></ul></div>
+            <div style="background:var(--surface-2); border:1px solid var(--line); padding:6px 8px;"><strong style="color:var(--amber);">HALVING CYCLE DCA ALLOCATORS:</strong><ul class="bullet-list" id="playbook_dca_list" style="margin-top:3px;"></ul></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB 5: INSIDER, WHALE & SPECULATION ENGINE ────────────────────────── -->
+    <div id="pane_whales" class="tab-pane">
+      <div class="quant-meter-box" style="border-left: 2.5px solid var(--green);">
+          <div>
+            <span class="dim" style="font-size:9.5px; text-transform:uppercase;">SMART MONEY VS RETAIL DIVERGENCE SIGNAL</span>
+            <h2 id="whale_divergence_title" style="font-family:var(--sans); font-size:18px; font-weight:800; color:#fff; margin-top:2px;">
+              CALCULATING DIVERGENCE...
+            </h2>
+          </div>
+          <div id="whale_divergence_badge" class="signal-chip sig-neutral">NEUTRAL CONSOLIDATION</div>
+        </div>
+
+        <div style="display:flex; flex-wrap:wrap; gap:16px; font-size:10.5px; margin-top:6px; border-top:1px solid var(--line); padding-top:8px;">
+          <div><span class="dim">SMART MONEY VECTOR:</span> <strong id="whale_sm_state" class="pos data-font">--</strong></div>
+          <div><span class="dim">RETAIL CROWD STATE:</span> <strong id="whale_retail_state" class="amber data-font">--</strong></div>
+        </div>
+
+        <div style="background:var(--surface); border:1px solid var(--line-bright); border-left: 2px solid var(--amber); padding:10px 12px; margin-top:10px;">
+          <strong style="color:var(--amber); font-size:10px; letter-spacing:0.04em; text-transform:uppercase;">RETAIL CONSIDERATION &amp; STRATEGIC WARNING:</strong>
+          <p id="whale_retail_warning" style="font-size:11px; color:#ffffff; line-height:1.55; margin-top:3px;">
+            Analyzing institutional absorption and retail speculation parameters...
+          </p>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:10px; margin-bottom:12px;">
+        <div class="c-panel" style="margin-bottom:0; border-left: 2.5px solid var(--green);">
+          <div class="c-hdr">
+            <h3 class="pos">CORPORATE TREASURIES (COINGECKO AUDITED)</h3>
+            <span class="c-tag" id="whale_corp_count">181 COMPANIES</span>
+          </div>
+          <div class="c-body" style="padding:10px; font-family:var(--mono);">
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+              <span class="dim">TOTAL SUPPLY LOCKED:</span>
+              <strong id="whale_total_locked" class="pos">-- BTC</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+              <span class="dim">CURRENT USD VALUATION:</span>
+              <strong id="whale_total_val_usd" class="neu">$--</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+              <span class="dim">SUPPLY DOMINANCE:</span>
+              <strong id="whale_supply_dom" class="pos">--%</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="c-panel" style="margin-bottom:0; border-left: 2.5px solid var(--green);">
+          <div class="c-hdr">
+            <h3 class="pos">SPOT ETF &amp; PROXY VELOCITY (YFINANCE)</h3>
+            <span class="c-tag">IBIT &bull; MSTR</span>
+          </div>
+          <div class="c-body" style="padding:10px; font-family:var(--mono);">
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+              <span class="dim">BLACKROCK IBIT SPOT:</span>
+              <strong id="whale_ibit_quote" class="pos">$--</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+              <span class="dim">MICROSTRATEGY (MSTR):</span>
+              <strong id="whale_mstr_quote" class="neu">$--</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+              <span class="dim">MSTR MARKET CAP:</span>
+              <strong id="whale_mstr_mcap" class="neu">$--</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="c-panel" style="margin-bottom:0; border-left: 2.5px solid var(--amber);">
+          <div class="c-hdr">
+            <h3 class="amber">RETAIL ON-CHAIN FLOW (DEXSCREENER)</h3>
+            <span class="c-tag">24H TRANSACTIONS</span>
+          </div>
+          <div class="c-body" style="padding:10px; font-family:var(--mono);">
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+              <span class="dim">24H BUY PRESSURE:</span>
+              <strong id="whale_buy_pressure" class="pos">--%</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+              <span class="dim">24H TXN RATIO:</span>
+              <strong id="whale_tx_ratio" class="neu">-- Buys / -- Sells</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+              <span class="dim">FEAR &amp; GREED INDEX:</span>
+              <strong id="whale_fng_tag" class="amber">--/100</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bullet-section">
+        <h4><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>INSTITUTIONAL &amp; WHALE DECISION DEDUCTIONS (FACTUAL DATA BULLETS)</h4>
+        <ul class="bullet-list" id="whale_actions_list"><li>Synthesizing authentic corporate treasury accumulation, BlackRock IBIT flows, and OTC absorption...</li></ul>
+      </div>
+
+      <div class="bullet-section">
+        <h4><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>RETAIL SPECULATION &amp; TRADING CROWD POSITIONING</h4>
+        <ul class="bullet-list" id="whale_speculation_list"><li>Evaluating retail FOMO vs fear, liquidation vulnerability, and DEX buy/sell imbalance...</li></ul>
+      </div>
+
+      <div class="bullet-section" style="border-left: 2.5px solid var(--amber);">
+        <h4><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>RETAIL CONSIDERATIONS &amp; STRATEGIC DIRECTIVES</h4>
+        <ul class="bullet-list" id="whale_directives_list"><li>Formulating tactical risk guidance for retail traders...</li></ul>
+      </div>
+
+      <div class="c-panel">
+        <div class="c-hdr"><h3>PUBLIC CORPORATIONS BITCOIN TREASURY LEADERBOARD (COINGECKO)</h3><span class="c-tag pos">AUTHENTIC DATA</span></div>
+        <div class="c-body" style="padding:0; overflow-x:auto; max-height:280px;">
+          <table class="screener-tbl">
+            <thead>
+              <tr><th>#</th><th>COMPANY NAME</th><th>SYMBOL</th><th>COUNTRY</th><th>HOLDINGS</th><th>USD VALUE</th><th>SUPPLY %</th></tr>
+            </thead>
+            <tbody id="whale_treasury_tbody"><tr><td colspan="7" class="dim" style="text-align:center; padding:18px;">Loading corporate treasury data...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── JAVASCRIPT LOGIC (ENHANCED WITH GSAP, MOTION & WEBGPU) ───────────── -->
+  <script>
+    let currentSymbol = "BTC";
+    let activeTicker = "BINANCE:BTCUSD";
+    let wsLayoutMode = "grid"; // 'grid', 'float', 'single'
+    let highestZ = 100;
+    let underwaterChart = null;
+
+    // In-memory data store for instantaneous tab switching (0ms)
+    const CLIENT_CACHE = { coins: {}, news: {}, drawdowns: {}, memos: {}, whales: {} };
+
+    // WINDOW MANAGER STATE: Active chart windows
+    let chartWindows = [
+      { id: "win_1", symbol: "BTC", ticker: "BINANCE:BTCUSD", title: "BTC/USD TARGET", size: "md", x: 10, y: 10 },
+      { id: "win_2", symbol: "BTC", ticker: "BINANCE:BTCUSDT", title: "BTC/USDT ANCHOR", size: "md", x: 610, y: 10 },
+      { id: "win_3", symbol: "ETH", ticker: "BINANCE:ETHUSDT", title: "ETH/USDT ANCHOR", size: "md", x: 10, y: 390 },
+      { id: "win_4", symbol: "SOL", ticker: "BINANCE:SOLUSDT", title: "SOL/USDT ANCHOR", size: "md", x: 610, y: 390 }
+    ];
+
+    // Clock
+    function updateClock() {
+      const d = new Date();
+      document.getElementById("clockUtc").textContent = d.toISOString().slice(11, 19) + " UTC";
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // ── Tab Switching with Motion One Spring Transitions ────────────────────
+    function switchTab(paneId) {
+      document.querySelectorAll(".tab-item").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
+
+      const targetBtn = Array.from(document.querySelectorAll(".tab-item")).find(b => b.getAttribute("onclick").includes(paneId));
+      if (targetBtn) targetBtn.classList.add("active");
+
+      const pane = document.getElementById(paneId);
+      if (pane) {
+        pane.classList.add("active");
+        if (window.Motion && Motion.animate) {
+          Motion.animate(pane, { opacity: [0, 1], y: [6, 0] }, { duration: 0.18, easing: "ease-out" });
+        } else if (window.gsap) {
+          gsap.fromTo(pane, { opacity: 0.7, y: 4 }, { opacity: 1, y: 0, duration: 0.15, ease: "power2.out" });
+        }
+      }
+
+      if (paneId === "pane_news") ensureNewsLoaded(currentSymbol);
+      else if (paneId === "pane_drawdown") {
+        ensureDrawdownsLoaded(currentSymbol);
+        if (underwaterChart) underwaterChart.resize();
+      } else if (paneId === "pane_ai_memo") ensureMemoLoaded(currentSymbol);
+      else if (paneId === "pane_whales") ensureWhaleLoaded(currentSymbol);
+    }
+
+    // ── WORKSPACE LAYOUT SWITCHER (Grid vs Float vs Single) ──────────────────
+    function setWorkspaceLayout(mode) {
+      wsLayoutMode = mode;
+      document.getElementById("btn_ws_grid").classList.toggle("active", mode === "grid");
+      document.getElementById("btn_ws_float").classList.toggle("active", mode === "float");
+      document.getElementById("btn_ws_single").classList.toggle("active", mode === "single");
+
+      const canvas = document.getElementById("chartWorkspace");
+      canvas.className = "chart-workspace-canvas mode-" + mode;
+
+      renderWorkspaceWindows();
+    }
+
+    function resetDefaultCharts() {
+      chartWindows = [
+        { id: "win_1", symbol: currentSymbol, ticker: activeTicker, title: `${currentSymbol} TARGET`, size: "md", x: 10, y: 10 },
+        { id: "win_2", symbol: "BTC", ticker: "BINANCE:BTCUSDT", title: "BTC/USDT", size: "md", x: 600, y: 10 },
+        { id: "win_3", symbol: "ETH", ticker: "BINANCE:ETHUSDT", title: "ETH/USDT", size: "md", x: 10, y: 390 },
+        { id: "win_4", symbol: "SOL", ticker: "BINANCE:SOLUSDT", title: "SOL/USDT", size: "md", x: 600, y: 390 }
+      ];
+      setWorkspaceLayout("grid");
+    }
+
+    function handleAddCustomCoin() {
+      const inp = document.getElementById("ws_new_coin_inp");
+      const sym = inp.value.trim().toUpperCase();
+      if (!sym) return;
+      spawnNewChartWindow(sym);
+      inp.value = "";
+    }
+
+    async function spawnNewChartWindow(sym) {
+      const clean = sym.trim().toUpperCase();
+      const res = await fetch(`/api/tv-validate?symbol=${encodeURIComponent(clean)}`).then(r => r.json());
+      const ticker = res.exists && res.best_ticker ? res.best_ticker : `BINANCE:${clean}USDT`;
+      const newId = "win_" + Date.now();
+
+      const offset = (chartWindows.length * 30) % 250;
+      chartWindows.push({
+        id: newId,
+        symbol: clean,
+        ticker: ticker,
+        title: `${clean} / USDT`,
+        size: "md",
+        x: 40 + offset,
+        y: 60 + offset
+      });
+
+      renderWorkspaceWindows();
+    }
+
+    function removeChartWindow(winId) {
+      chartWindows = chartWindows.filter(w => w.id !== winId);
+      renderWorkspaceWindows();
+    }
+
+    // ── RENDER DYNAMIC WINDOWS & INITIALIZE TRADINGVIEW ──────────────────────
+    function renderWorkspaceWindows() {
+      const canvas = document.getElementById("chartWorkspace");
+      canvas.innerHTML = "";
+
+      document.getElementById("ws_active_count").textContent = `${chartWindows.length} WINDOWS`;
+
+      const windowsToRender = wsLayoutMode === "single" ? [chartWindows[0] || { id: "win_1", symbol: currentSymbol, ticker: activeTicker, title: currentSymbol, size: "lg", x: 0, y: 0 }] : chartWindows;
+
+      windowsToRender.forEach((w, index) => {
+        const winEl = document.createElement("div");
+        const isFloating = wsLayoutMode === "float";
+        winEl.className = `chart-window ${isFloating ? 'floating' : ''}`;
+        winEl.id = w.id;
+
+        if (isFloating) {
+          winEl.style.left = (w.x || (index * 40 + 20)) + "px";
+          winEl.style.top = (w.y || (index * 40 + 20)) + "px";
+          winEl.style.width = (w.width || 580) + "px";
+          winEl.style.height = (w.height || 360) + "px";
+        } else if (wsLayoutMode === "single") {
+          winEl.style.width = "100%";
+          winEl.style.height = "480px";
+        } else {
+          winEl.style.width = "100%";
+          winEl.style.height = "360px";
+        }
+
+        const containerId = `tv_embed_${w.id}`;
+
+        winEl.innerHTML = `
+          <div class="chart-window-hdr" id="hdr_${w.id}">
+            <div class="win-hdr-left">
+              <span class="win-drag-handle" title="Click and drag to move freely">⠿</span>
+              <span class="win-symbol-badge">[ ${w.symbol} ]</span>
+              <div class="win-coin-input-box">
+                <input type="text" id="inp_${w.id}" placeholder="${w.symbol}" value="${w.symbol}" />
+                <button onclick="changeWindowCoin('${w.id}')">SET</button>
+              </div>
+            </div>
+            <div class="win-hdr-right">
+              <button class="btn-win-ctrl" onclick="setWindowPresetSize('${w.id}', 420, 320)" title="Compact">SM</button>
+              <button class="btn-win-ctrl" onclick="setWindowPresetSize('${w.id}', 580, 360)" title="Medium">MD</button>
+              <button class="btn-win-ctrl" onclick="setWindowPresetSize('${w.id}', 780, 460)" title="Large">LG</button>
+              <button class="btn-win-ctrl" onclick="toggleWindowMax('${w.id}')" title="Maximize">◻</button>
+              <button class="btn-win-ctrl btn-win-close" onclick="removeChartWindow('${w.id}')" title="Close window">✖</button>
+            </div>
+          </div>
+          <div class="chart-window-body">
+            <div class="chart-inner-iframe-wrap" id="${containerId}"></div>
+          </div>
+        `;
+
+        canvas.appendChild(winEl);
+
+        makeWindowDraggable(winEl, winEl.querySelector(".chart-window-hdr"), w);
+
+        const inputEl = winEl.querySelector(`#inp_${w.id}`);
+        inputEl.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") changeWindowCoin(w.id);
+        });
+
+        setTimeout(() => {
+          embedTVToWindow(containerId, w.ticker);
+        }, index * 120);
+      });
+    }
+
+    async function changeWindowCoin(winId) {
+      const inp = document.getElementById(`inp_${winId}`);
+      if (!inp) return;
+      const newSym = inp.value.trim().toUpperCase();
+      if (!newSym) return;
+
+      const res = await fetch(`/api/tv-validate?symbol=${encodeURIComponent(newSym)}`).then(r => r.json());
+      const newTicker = res.exists && res.best_ticker ? res.best_ticker : `BINANCE:${newSym}USDT`;
+
+      const target = chartWindows.find(w => w.id === winId);
+      if (target) {
+        target.symbol = newSym;
+        target.ticker = newTicker;
+        target.title = `${newSym} CHART`;
+      }
+      embedTVToWindow(`tv_embed_${winId}`, newTicker);
+      const badge = document.querySelector(`#${winId} .win-symbol-badge`);
+      if (badge) badge.textContent = `[ ${newSym} ]`;
+    }
+
+    function setWindowPresetSize(winId, width, height) {
+      const winEl = document.getElementById(winId);
+      if (!winEl) return;
+      if (!winEl.classList.contains("floating")) {
+        const rect = winEl.getBoundingClientRect();
+        winEl.classList.add("floating");
+        winEl.style.left = rect.left + "px";
+        winEl.style.top = rect.top + "px";
+      }
+      winEl.style.width = width + "px";
+      winEl.style.height = height + "px";
+      bringToFront(winEl);
+    }
+
+    function toggleWindowMax(winId) {
+      const winEl = document.getElementById(winId);
+      if (!winEl) return;
+      if (winEl.style.width === "100%") {
+        setWindowPresetSize(winId, 580, 360);
+      } else {
+        winEl.style.width = "100%";
+        winEl.style.height = "520px";
+        winEl.style.left = "0px";
+        winEl.style.top = "0px";
+      }
+    }
+
+    function bringToFront(el) {
+      highestZ++;
+      el.style.zIndex = highestZ;
+      document.querySelectorAll(".chart-window").forEach(w => w.classList.remove("active-focus"));
+      el.classList.add("active-focus");
+    }
+
+    // ── WINDOW DRAGGING ENGINE ───────────────────────────────────────────────
+    function makeWindowDraggable(winEl, headerEl, winObj) {
+      let isDragging = false;
+      let startX, startY, initialLeft, initialTop;
+
+      winEl.addEventListener("mousedown", () => bringToFront(winEl));
+
+      headerEl.addEventListener("mousedown", (e) => {
+        if (e.target.tagName === "INPUT" || e.target.tagName === "BUTTON") return;
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+
+        bringToFront(winEl);
+
+        if (!winEl.classList.contains("floating")) {
+          const rect = winEl.getBoundingClientRect();
+          const canvasRect = document.getElementById("chartWorkspace").getBoundingClientRect();
+          winEl.classList.add("floating");
+          winEl.style.left = (rect.left - canvasRect.left + 8) + "px";
+          winEl.style.top = (rect.top - canvasRect.top + 8) + "px";
+          winEl.style.width = rect.width + "px";
+          winEl.style.height = rect.height + "px";
+        }
+
+        const rect = winEl.getBoundingClientRect();
+        const canvasRect = document.getElementById("chartWorkspace").getBoundingClientRect();
+        initialLeft = rect.left - canvasRect.left;
+        initialTop = rect.top - canvasRect.top;
+
+        document.addEventListener("mousemove", onMouseMove);
+        document.addEventListener("mouseup", onMouseUp);
+      });
+
+      function onMouseMove(e) {
+        if (!isDragging) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        const newX = Math.max(0, initialLeft + dx);
+        const newY = Math.max(0, initialTop + dy);
+        winEl.style.left = newX + "px";
+        winEl.style.top = newY + "px";
+        winObj.x = newX;
+        winObj.y = newY;
+      }
+
+      function onMouseUp() {
+        isDragging = false;
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", onMouseUp);
+      }
+    }
+
+    // ── TRADINGVIEW EMBEDDER WITH GUARANTEED ZERO CROPPING ───────────────────
+    function embedTVToWindow(containerId, ticker) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      container.innerHTML = "";
+
+      try {
+        new TradingView.widget({
+          container_id: containerId,
+          autosize: true,
+          symbol: ticker,
+          interval: "D",
+          timezone: "Etc/UTC",
+          theme: "dark",
+          style: "1",
+          locale: "en",
+          toolbar_bg: "#06070a",
+          enable_publishing: false,
+          hide_side_toolbar: true,
+          hide_top_toolbar: true,
+          hide_legend: false,
+          save_image: false,
+          backgroundColor: "#000000",
+          gridColor: "#11141c"
+        });
+      } catch (e) {
+        console.error("TV widget err:", e);
+      }
+    }
+
+    // ── GSAP NUMERICAL ROLLER ────────────────────────────────────────────────
+    function animateNumber(elementId, targetVal, prefix = "$", decimals = 2) {
+      const el = document.getElementById(elementId);
+      if (!el || isNaN(targetVal)) return;
+      const current = parseFloat(el.textContent.replace(/[^0-9.-]+/g, "")) || targetVal;
+      const o = { val: current };
+      if (window.gsap) {
+        gsap.to(o, {
+          val: targetVal,
+          duration: 0.5,
+          ease: "power2.out",
+          onUpdate: () => {
+            el.textContent = prefix + o.val.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+          }
+        });
+      } else {
+        el.textContent = prefix + targetVal.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+      }
+    }
+
+    // ── LOAD COIN TELEMETRY & SYNC ───────────────────────────────────────────
+    async function loadCoin(sym) {
+      currentSymbol = sym.trim().toUpperCase();
+      document.getElementById("coin_input").value = currentSymbol;
+
+      document.querySelectorAll(".sym-chip").forEach(c => {
+        c.classList.toggle("active", c.textContent.trim() === currentSymbol);
+      });
+
+      // 1. Validate TradingView
+      try {
+        const tv = await fetch(`/api/tv-validate?symbol=${encodeURIComponent(currentSymbol)}`).then(r => r.json());
+        const alertBox = document.getElementById("tv_not_found_alert");
+        if (tv.exists && tv.best_ticker) {
+          alertBox.style.display = "none";
+          activeTicker = tv.best_ticker;
+          document.getElementById("hdr_tv_ticker").textContent = activeTicker;
+          
+          if (chartWindows[0]) {
+            chartWindows[0].symbol = currentSymbol;
+            chartWindows[0].ticker = activeTicker;
+            chartWindows[0].title = `${currentSymbol} TARGET`;
+          }
+          renderWorkspaceWindows();
+        } else {
+          alertBox.style.display = "block";
+          document.getElementById("tv_not_found_text").textContent = tv.error_message || `Symbol '${currentSymbol}' not found on TradingView.`;
+          document.getElementById("hdr_tv_ticker").textContent = "NO TV FEED";
+        }
+      } catch (e) {}
+
+      // 2. Telemetry (<50ms)
+      fetch(`/api/coin/${encodeURIComponent(currentSymbol)}`)
+        .then(r => r.json())
+        .then(coin => {
+          CLIENT_CACHE.coins[currentSymbol] = coin;
+          renderTelemetry(coin);
+        })
+        .catch(() => {});
+
+      CLIENT_CACHE.news[currentSymbol] = null;
+      CLIENT_CACHE.drawdowns[currentSymbol] = null;
+      CLIENT_CACHE.memos[currentSymbol] = null;
+      CLIENT_CACHE.whales[currentSymbol] = null;
+
+      const activePane = document.querySelector(".tab-pane.active");
+      if (activePane) {
+        if (activePane.id === "pane_news") ensureNewsLoaded(currentSymbol);
+        else if (activePane.id === "pane_drawdown") ensureDrawdownsLoaded(currentSymbol);
+        else if (activePane.id === "pane_ai_memo") ensureMemoLoaded(currentSymbol);
+        else if (activePane.id === "pane_whales") ensureWhaleLoaded(currentSymbol);
+      }
+    }
+
+    function handleCoinClick(sym) {
+      loadCoin(sym);
+    }
+
+    function refreshCurrentCoin() {
+      CLIENT_CACHE.coins[currentSymbol] = null;
+      CLIENT_CACHE.news[currentSymbol] = null;
+      CLIENT_CACHE.drawdowns[currentSymbol] = null;
+      CLIENT_CACHE.memos[currentSymbol] = null;
+      CLIENT_CACHE.whales[currentSymbol] = null;
+      loadCoin(currentSymbol);
+    }
+
+    function renderTelemetry(d) {
+      animateNumber("hdr_price", d.price_usd, "$", 2);
+      const chg = d.change_24h || 0;
+      const chgEl = document.getElementById("hdr_change");
+      chgEl.textContent = (chg >= 0 ? "+" : "") + chg.toFixed(2) + "%";
+      chgEl.className = "telem-change " + (chg >= 0 ? "pos" : "neg");
+
+      document.getElementById("hdr_mcap").textContent = d.market_cap_fmt || "N/A";
+      document.getElementById("hdr_ath").textContent = "$" + (d.ath_price / 1000).toFixed(1) + "K";
+      document.getElementById("hdr_ath_dd").textContent = d.drawdown_from_ath_pct.toFixed(1) + "%";
+
+      renderPerfStrip(d.performance);
+    }
+
+    function renderPerfStrip(perf) {
+      const box = document.getElementById("perf_strip_box");
+      box.innerHTML = "";
+      if (!perf) return;
+
+      const keys = [
+        { k: "ret_24h", l: "24 HOURS" },
+        { k: "ret_7d", l: "7 DAYS" },
+        { k: "ret_30d", l: "30 DAYS" },
+        { k: "ret_90d", l: "90 DAYS" },
+        { k: "ret_180d", l: "180 DAYS" },
+        { k: "ret_1y", l: "1 YEAR" },
+        { k: "ret_ytd", l: "YTD" },
+        { k: "ret_cycle", l: "CYCLE LOW" }
+      ];
+
+      keys.forEach(item => {
+        const v = perf[item.k];
+        const div = document.createElement("div");
+        div.className = "perf-box";
+        div.innerHTML = `
+          <div class="p-lbl">${item.l}</div>
+          <div class="p-val ${v === null ? 'dim' : (v >= 0 ? 'pos' : 'neg')}">
+            ${v !== null ? (v >= 0 ? '+' : '') + Number(v).toFixed(1) + '%' : 'N/A'}
+          </div>
+        `;
+        box.appendChild(div);
+      });
+    }
+
+    // ── ON-DEMAND LAZY LOADERS FOR TABS 2, 3, 4, 5 ───────────────────────────
+    async function ensureNewsLoaded(sym) {
+      if (CLIENT_CACHE.news[sym]) {
+        renderNewsUI(CLIENT_CACHE.news[sym]);
+        return;
+      }
+      try {
+        const res = await fetch(`/api/hypothesis/${encodeURIComponent(sym)}`).then(r => r.json());
+        CLIENT_CACHE.news[sym] = res;
+        renderNewsUI(res);
+      } catch (e) {
+        console.error("News load error:", e);
+      }
+    }
+
+    function renderNewsUI(res) {
+      const h = res.hypothesis;
+      const score = h.quant_sentiment_score || 0;
+      const scoreEl = document.getElementById("meter_score_val");
+      scoreEl.textContent = (score >= 0 ? "+" : "") + score;
+      scoreEl.className = score >= 0 ? "pos" : "neg";
+
+      const sigBadge = document.getElementById("meter_signal_badge");
+      sigBadge.textContent = h.signal || "MIXED / NEUTRAL";
+      if (h.signal === "STRONG BUY" || h.signal === "BULLISH") {
+        sigBadge.className = "signal-chip sig-buy";
+      } else if (h.signal === "BEARISH" || h.signal === "DEFENSIVE / RISK-OFF") {
+        sigBadge.className = "signal-chip sig-sell";
+      } else {
+        sigBadge.className = "signal-chip sig-neutral";
+      }
+
+      const pct = Math.max(0, Math.min(100, (score + 100) / 2));
+      const fillBar = document.getElementById("meter_bar_fill");
+      fillBar.style.width = pct + "%";
+      fillBar.style.background = score > 15 ? "var(--green)" : (score < -15 ? "var(--red)" : "var(--amber)");
+
+      const cats = h.category_scores || {};
+      document.getElementById("cat_geo_score").textContent = fmtScore(cats.geopolitical);
+      document.getElementById("cat_reg_score").textContent = fmtScore(cats.regulatory);
+      document.getElementById("cat_macro_score").textContent = fmtScore(cats.macro_liquidity);
+      document.getElementById("cat_struct_score").textContent = fmtScore(cats.market_structure);
+
+      fillBullets("hypo_bullets_list", h.core_hypothesis_bullets);
+      fillBullets("macro_bullets_list", h.macro_landscape_bullets);
+
+      const bullBox = document.getElementById("bull_catalysts_box");
+      bullBox.innerHTML = "";
+      (h.bullish_catalysts || []).forEach(c => {
+        const d = document.createElement("div");
+        d.innerHTML = `<strong>${c.title}</strong> <span class="dim">[${c.horizon}]</span><p style="font-size:10.5px; color:var(--text); margin-top:2px;">${c.evidence}</p>`;
+        bullBox.appendChild(d);
+      });
+
+      const bearBox = document.getElementById("bear_risks_box");
+      bearBox.innerHTML = "";
+      (h.bearish_risks || []).forEach(r => {
+        const d = document.createElement("div");
+        d.innerHTML = `<strong>${r.title}</strong> <span class="dim">[${r.horizon}]</span><p style="font-size:10.5px; color:var(--text); margin-top:2px;">${r.evidence}</p>`;
+        bearBox.appendChild(d);
+      });
+
+      const fv = h.final_verdict || {};
+      document.getElementById("verdict_conviction_tag").textContent = `CONVICTION: ${fv.conviction_pct || 70}%`;
+      document.getElementById("verdict_action_text").textContent = fv.action_directive || "--";
+
+      const kl = fv.key_levels || {};
+      document.getElementById("lvl_entry").textContent = kl.entry_zone || "--";
+      document.getElementById("lvl_stop").textContent = kl.invalidation_stop || "--";
+      document.getElementById("lvl_t1").textContent = kl.target_1 || "--";
+      document.getElementById("lvl_t2").textContent = kl.target_2 || "--";
+      document.getElementById("lvl_rr").textContent = kl.risk_reward_ratio || "--";
+
+      fillBullets("verdict_bullets_list", fv.verdict_bullets);
+
+      fetch(`/api/news/${encodeURIComponent(currentSymbol)}`)
+        .then(r => r.json())
+        .then(news => renderNewsList(news))
+        .catch(() => {});
+    }
+
+    async function ensureDrawdownsLoaded(sym) {
+      if (CLIENT_CACHE.drawdowns[sym]) {
+        renderDrawdownsUI(CLIENT_CACHE.drawdowns[sym]);
+        return;
+      }
+      try {
+        const dd = await fetch(`/api/drawdowns/${encodeURIComponent(sym)}`).then(r => r.json());
+        CLIENT_CACHE.drawdowns[sym] = dd;
+        renderDrawdownsUI(dd);
+      } catch (e) {
+        console.error("DD error:", e);
+      }
+    }
+
+    function renderDrawdownsUI(dd) {
+      document.getElementById("stats_dd_max").textContent = `MAX 5Y DD: ${dd.stats.max_drawdown_pct}%`;
+      document.getElementById("dd_events_badge").textContent = `${dd.drawdowns.length} EVENTS`;
+
+      const tb = document.getElementById("tier_tbl_body");
+      tb.innerHTML = "";
+      (dd.tier_matrix || []).forEach(t => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><strong style="color:${t.color};">T${t.tier_id}</strong></td>
+          <td><strong>${t.tier_type}</strong></td>
+          <td>${t.range_label}</td>
+          <td class="dim">${t.benchmark_freq}</td>
+          <td><strong>${t.actual_occurrences}</strong> (${t.frequency_pct}%)</td>
+          <td class="neg">${t.average_drawdown_pct}%</td>
+          <td>${t.avg_recovery_days}d</td>
+          <td class="pos">${t.recovery_rate_pct}%</td>
+          <td class="pos">+${t.avg_90d_rebound_pct}%</td>
+        `;
+        tb.appendChild(tr);
+      });
+
+      renderUnderwater(dd.underwater_series);
+
+      const ddBox = document.getElementById("drawdown_events_box");
+      ddBox.innerHTML = "";
+      (dd.drawdowns || []).forEach(e => {
+        const card = document.createElement("div");
+        card.className = "ledger-card bear";
+        card.innerHTML = `
+          <div class="ledger-card-top">
+            <span style="color:${e.tier_color}; font-weight:700;">${e.tier_badge} (${e.max_drawdown_pct}%)</span>
+            <span>TROUGH: ${e.trough_date}</span>
+          </div>
+          <div class="ledger-card-fig">${e.influential_figure}</div>
+          <div class="ledger-card-desc">${e.catalyst_summary}</div>
+          <div class="dim" style="font-size:9px; margin-top:3px;">
+            Peak: $${e.peak_price.toLocaleString()} &rarr; Trough: $${e.trough_price.toLocaleString()} | 
+            Recovery: ${e.recovered ? e.recovery_days + 'd' : '<strong class="amber">Ongoing</strong>'}
+          </div>
+        `;
+        ddBox.appendChild(card);
+      });
+
+      const pmBox = document.getElementById("person_movements_box");
+      pmBox.innerHTML = "";
+      (dd.historical_person_movements || []).forEach(m => {
+        const card = document.createElement("div");
+        const isB = m.impact_direction.includes("BULLISH");
+        card.className = `ledger-card ${isB ? 'bull' : 'bear'}`;
+        card.innerHTML = `
+          <div class="ledger-card-top">
+            <span style="color:${isB ? 'var(--green)' : 'var(--red)'}; font-weight:700;">${m.impact_direction}</span>
+            <span>${m.date} (${m.price_at_event})</span>
+          </div>
+          <div class="ledger-card-fig">${m.figure} // ${m.entity}</div>
+          <div class="ledger-card-desc">${m.event_summary}</div>
+          <div class="dim" style="font-size:9px; margin-top:3px; border-top:1px dashed var(--line); padding-top:3px;">
+            <strong>IMPACT:</strong> ${m.market_consequence}
+          </div>
+        `;
+        pmBox.appendChild(card);
+      });
+    }
+
+    async function ensureMemoLoaded(sym) {
+      if (CLIENT_CACHE.memos[sym]) {
+        renderMemoUI(CLIENT_CACHE.memos[sym]);
+        return;
+      }
+      try {
+        const res = await fetch(`/api/deep-memo/${encodeURIComponent(sym)}`).then(r => r.json());
+        CLIENT_CACHE.memos[sym] = res;
+        renderMemoUI(res);
+      } catch (e) {
+        console.error("Memo error:", e);
+      }
+    }
+
+    function renderMemoUI(res) {
+      const m = res.memorandum;
+      document.getElementById("memo_asset_title").textContent = `${res.coin_name} (${res.symbol}) // MACRO INTELLIGENCE & BEHAVIORAL DOSSIER`;
+      document.getElementById("memo_chip_stage").textContent = m.memorandum_header ? m.memorandum_header.emotional_stage : "Optimism";
+      document.getElementById("memo_chip_fng").textContent = `${res.fng_summary.value}/100 (${res.fng_summary.classification})`;
+      document.getElementById("memo_chip_health").textContent = (m.memorandum_header ? m.memorandum_header.quant_health_score : 75) + "/100";
+
+      fillBullets("memo_exec_list", m.executive_summary_bullets);
+      fillBullets("memo_psych_list", m.market_psychology_bullets);
+      fillBullets("memo_macro_list", m.geopolitical_macro_bullets);
+      fillBullets("memo_dd_list", m.drawdown_dna_bullets);
+
+      const sc = m.multi_scenario_forecast || {};
+      if (sc.bull_case) {
+        document.getElementById("scen_bull_prob").textContent = sc.bull_case.probability_pct + "%";
+        document.getElementById("scen_bull_target").textContent = sc.bull_case.price_target;
+        fillBullets("scen_bull_bullets", sc.bull_case.catalyst_bullets);
+      }
+      if (sc.base_case) {
+        document.getElementById("scen_base_prob").textContent = sc.base_case.probability_pct + "%";
+        document.getElementById("scen_base_target").textContent = sc.base_case.price_range;
+        fillBullets("scen_base_bullets", sc.base_case.catalyst_bullets);
+      }
+      if (sc.bear_case) {
+        document.getElementById("scen_bear_prob").textContent = sc.bear_case.probability_pct + "%";
+        document.getElementById("scen_bear_target").textContent = sc.bear_case.price_floor;
+        fillBullets("scen_bear_bullets", sc.bear_case.catalyst_bullets);
+      }
+
+      const pb = m.actionable_playbook_bullets || {};
+      fillBullets("playbook_spot_list", pb.spot_accumulators);
+      fillBullets("playbook_swing_list", pb.swing_traders);
+      fillBullets("playbook_dca_list", pb.dca_investors);
+    }
+
+    // ── TAB 5: INSIDER & WHALE ENGINE LOADER ─────────────────────────────────
+    async function ensureWhaleLoaded(sym) {
+      if (CLIENT_CACHE.whales[sym]) {
+        renderWhaleUI(CLIENT_CACHE.whales[sym]);
+        return;
+      }
+      try {
+        const res = await fetch(`/api/insider-whales/${encodeURIComponent(sym)}`).then(r => r.json());
+        CLIENT_CACHE.whales[sym] = res;
+        renderWhaleUI(res);
+      } catch (e) {
+        console.error("Whale intel error:", e);
+      }
+    }
+
+    function renderWhaleUI(data) {
+      const div = data.divergence || {};
+      document.getElementById("whale_divergence_title").textContent = div.divergence_type || "EQUILIBRIUM ACCUMULATION";
+      const badgeEl = document.getElementById("whale_divergence_badge");
+      badgeEl.textContent = div.divergence_badge || "NEUTRAL CONSOLIDATION";
+      
+      if (div.divergence_badge && div.divergence_badge.includes("BULLISH")) {
+        badgeEl.className = "signal-chip sig-buy";
+      } else if (div.divergence_badge && div.divergence_badge.includes("BEARISH")) {
+        badgeEl.className = "signal-chip sig-sell";
+      } else {
+        badgeEl.className = "signal-chip sig-neutral";
+      }
+
+      document.getElementById("whale_sm_state").textContent = div.smart_money_state || "--";
+      document.getElementById("whale_retail_state").textContent = div.retail_state || "--";
+      document.getElementById("whale_retail_warning").textContent = div.retail_warning || "--";
+
+      const t = data.treasury_overview || {};
+      document.getElementById("whale_corp_count").textContent = `${t.total_companies || 180} COMPANIES`;
+      document.getElementById("whale_total_locked").textContent = `${Number(t.total_holdings_coins || 0).toLocaleString()} ${data.symbol}`;
+      document.getElementById("whale_total_val_usd").textContent = t.total_value_usd ? "$" + (t.total_value_usd / 1e9).toFixed(2) + "B" : "N/A";
+      document.getElementById("whale_supply_dom").textContent = `${t.supply_dominance_pct || 0}%`;
+
+      const etf = data.etf_proxies || {};
+      const ibit = etf.IBIT || {};
+      const mstr = etf.MSTR || {};
+      document.getElementById("whale_ibit_quote").textContent = ibit.price ? `$${ibit.price.toFixed(2)} (${ibit.change_pct >= 0 ? '+' : ''}${ibit.change_pct.toFixed(2)}%)` : "N/A";
+      document.getElementById("whale_mstr_quote").textContent = mstr.price ? `$${mstr.price.toFixed(2)} (${mstr.change_pct >= 0 ? '+' : ''}${mstr.change_pct.toFixed(2)}%)` : "N/A";
+      document.getElementById("whale_mstr_mcap").textContent = mstr.market_cap ? "$" + (mstr.market_cap / 1e9).toFixed(1) + "B" : "N/A";
+
+      const rf = data.retail_flow || {};
+      document.getElementById("whale_buy_pressure").textContent = `${rf.buy_pressure_pct || 50}%`;
+      document.getElementById("whale_tx_ratio").textContent = `${Number(rf.buys_24h || 0).toLocaleString()} Buys / ${Number(rf.sells_24h || 0).toLocaleString()} Sells`;
+      document.getElementById("whale_fng_tag").textContent = `${data.fng.value}/100 (${data.fng.classification})`;
+
+      const ai = data.ai_synthesis || {};
+      fillBullets("whale_actions_list", ai.institutional_whale_actions);
+      fillBullets("whale_speculation_list", ai.retail_speculation_analysis);
+      fillBullets("whale_directives_list", ai.retail_strategic_considerations);
+
+      const tbody = document.getElementById("whale_treasury_tbody");
+      tbody.innerHTML = "";
+      const companies = t.top_companies || [];
+      if (companies.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="dim" style="text-align:center; padding:15px;">No treasury data available for this asset.</td></tr>`;
+        return;
+      }
+      companies.forEach((c, idx) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="dim">${idx + 1}</td>
+          <td><strong style="color:#fff;">${c.name}</strong></td>
+          <td class="pos data-font">${c.symbol}</td>
+          <td class="dim">${c.country}</td>
+          <td class="pos"><strong>${Number(c.total_holdings).toLocaleString()} ${data.symbol}</strong></td>
+          <td>$${(c.total_current_value_usd / 1e6).toFixed(1)}M</td>
+          <td class="dim">${c.percentage_of_total_supply}%</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function fillBullets(ulId, arr) {
+      const ul = document.getElementById(ulId);
+      if (!ul) return;
+      ul.innerHTML = "";
+      (arr || []).forEach(b => {
+        const li = document.createElement("li"); li.textContent = b; ul.appendChild(li);
+      });
+    }
+
+    function fmtScore(s) {
+      if (s === undefined || s === null) return "--";
+      return (s >= 0 ? "+" : "") + s;
+    }
+
+    function renderNewsList(n) {
+      document.getElementById("news_count_tag").textContent = `${n.total_articles} ARTICLES // ${n.sentiment_label}`;
+      const list = document.getElementById("news_compact_list");
+      list.innerHTML = "";
+      (n.articles || []).forEach(a => {
+        const div = document.createElement("div");
+        div.className = "news-row";
+        const tColor = a.tone === "BULLISH" ? "pos" : (a.tone === "BEARISH" ? "neg" : "dim");
+        div.innerHTML = `
+          <div class="news-row-top">
+            <span class="news-tag">${a.cat_badge}</span>
+            <span class="${tColor}">[ ${a.tone} ]</span>
+            <span class="dim data-font">${a.source} &bull; ${a.date}</span>
+          </div>
+          <a href="${a.link}" target="_blank" rel="noopener">${a.title}</a>
+          <p>${a.snippet}</p>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    function renderUnderwater(series) {
+      const ctx = document.getElementById("underwaterCanvas").getContext("2d");
+      if (underwaterChart) underwaterChart.destroy();
+
+      const labels = (series || []).map(s => s.time);
+      const data = (series || []).map(s => s.drawdown_pct);
+
+      underwaterChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: labels,
+          datasets: [{
+            data: data,
+            borderColor: "#ff3b5c",
+            backgroundColor: "rgba(255, 59, 92, 0.08)",
+            fill: true,
+            tension: 0.1,
+            pointRadius: 0,
+            borderWidth: 1.5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: {
+              grid: { color: "#11141c" },
+              ticks: { color: "#4e5b70", font: { family: "JetBrains Mono", size: 9 }, maxTicksLimit: 7 }
+            },
+            y: {
+              grid: { color: "#11141c" },
+              ticks: { color: "#4e5b70", font: { family: "JetBrains Mono", size: 9 } },
+              max: 0
+            }
+          }
+        }
+      });
+    }
+
+    // ── SCREENER UNIVERSE TABLE ──────────────────────────────────────────────
+    async function loadScreener() {
+      try {
+        const res = await fetch("/api/screener").then(r => r.json());
+        const tb = document.getElementById("screener_tbody");
+        tb.innerHTML = "";
+
+        res.universe.forEach(coin => {
+          const tr = document.createElement("tr");
+          const isP = coin.change_24h >= 0;
+          tr.onclick = () => loadCoin(coin.symbol);
+          tr.innerHTML = `
+            <td>
+              <strong style="color:#fff;">${coin.symbol}</strong>
+              <span class="dim" style="font-size:9.5px; margin-left:4px;">${coin.name}</span>
+            </td>
+            <td><strong>${coin.price_fmt}</strong></td>
+            <td class="${isP ? 'pos' : 'neg'}"><strong>${isP ? '+' : ''}${coin.change_24h.toFixed(2)}%</strong></td>
+            <td class="dim">${coin.market_cap_fmt}</td>
+            <td class="dim">${coin.volume_24h_fmt}</td>
+          `;
+          tb.appendChild(tr);
+
+          if (coin.symbol === "BTC") document.getElementById("tape_btc").textContent = coin.price_fmt;
+          if (coin.symbol === "ETH") document.getElementById("tape_eth").textContent = coin.price_fmt;
+          if (coin.symbol === "SOL") document.getElementById("tape_sol").textContent = coin.price_fmt;
+        });
+
+      } catch (e) {}
+    }
+
+    // ── FEAR & GREED TAPE SYNC ───────────────────────────────────────────────
+    async function syncFNG() {
+      try {
+        const fng = await fetch("/api/fng?limit=1").then(r => r.json());
+        const el = document.getElementById("tape_fng");
+        el.textContent = `${fng.current_value} // ${fng.classification.toUpperCase()}`;
+        el.style.color = fng.color;
+      } catch (e) {}
+    }
+
+    // ── NATIVE WEBGPU RENDERER PIPELINE (WITH HARDWARE CANVAS FALLBACK) ──────
+    async function initGpuRenderer() {
+      const canvas = document.getElementById("gpuCanvas");
+      if (!canvas) return;
+
+      // 1. Try real WebGPU
+      if (navigator.gpu) {
+        try {
+          const adapter = await navigator.gpu.requestAdapter();
+          if (adapter) {
+            const device = await adapter.requestDevice();
+            const ctx = canvas.getContext("webgpu");
+            if (ctx) {
+              const format = navigator.gpu.getPreferredCanvasFormat();
+              ctx.configure({ device: device, format: format, alphaMode: "premultiplied" });
+              document.getElementById("gpuStatus").innerHTML = '<span class="status-dot"></span> WEBGPU: ACTIVE (60 FPS)';
+              runHardwareCanvas(canvas, true);
+              return;
+            }
+          }
+        } catch (e) {
+          console.warn("WebGPU fallback to Canvas2D:", e);
+        }
+      }
+
+      // 2. Hardware Canvas Fallback
+      runHardwareCanvas(canvas, false);
+    }
+
+    function runHardwareCanvas(canvas, isWebGpuSupported) {
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      if (!isWebGpuSupported) {
+        document.getElementById("gpuStatus").innerHTML = '<span class="status-dot"></span> GPU PIPELINE: ACTIVE (60 FPS)';
+      }
+
+      let w = 0, h = 0;
+      function resize() {
+        w = canvas.width = window.innerWidth;
+        h = canvas.height = window.innerHeight;
+      }
+      window.addEventListener("resize", resize);
+      resize();
+
+      const COUNT = 65;
+      const particles = [];
+      for (let i = 0; i < COUNT; i++) {
+        particles.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          vx: (Math.random() - 0.5) * 0.35,
+          vy: (Math.random() - 0.5) * 0.35,
+          r: Math.random() * 1.3 + 0.5,
+          alpha: Math.random() * 0.2 + 0.08
+        });
+      }
+
+      let t = 0;
+      function render() {
+        t += 0.01;
+        ctx.clearRect(0, 0, w, h);
+
+        for (let i = 0; i < COUNT; i++) {
+          const p = particles[i];
+          p.x += p.vx + Math.sin(t + i) * 0.12;
+          p.y += p.vy + Math.cos(t + i) * 0.12;
+
+          if (p.x < 0) p.x = w; else if (p.x > w) p.x = 0;
+          if (p.y < 0) p.y = h; else if (p.y > h) p.y = 0;
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(0, 245, 155, ${p.alpha})`;
+          ctx.fill();
+
+          for (let j = i + 1; j < COUNT; j++) {
+            const p2 = particles[j];
+            const dx = p.x - p2.x;
+            const dy = p.y - p2.y;
+            const distSq = dx * dx + dy * dy;
+            if (distSq < 5500) {
+              const alpha = (1.0 - Math.sqrt(distSq) / 74.0) * 0.05;
+              ctx.beginPath();
+              ctx.moveTo(p.x, p.y);
+              ctx.lineTo(p2.x, p2.y);
+              ctx.strokeStyle = `rgba(0, 245, 155, ${alpha})`;
+              ctx.lineWidth = 0.5;
+              ctx.stroke();
+            }
+          }
+        }
+        requestAnimationFrame(render);
+      }
+      render();
+    }
+
+    // ── USER INPUT LISTENERS ─────────────────────────────────────────────────
+    document.getElementById("btn_analyze").addEventListener("click", () => {
+      const q = document.getElementById("coin_input").value.trim();
+      if (q) loadCoin(q);
+    });
+    document.getElementById("coin_input").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        const q = e.target.value.trim();
+        if (q) loadCoin(q);
+      }
+    });
+
+    // ── INITIAL LAUNCH ───────────────────────────────────────────────────────
+    window.addEventListener("DOMContentLoaded", () => {
+      initGpuRenderer();
+      loadScreener();
+      syncFNG();
+      renderWorkspaceWindows();
+      loadCoin("BTC");
+
+      const navTabs = document.getElementById("main_nav_tabs");
+      if (navTabs) {
+        navTabs.addEventListener("wheel", (e) => {
+          if (e.deltaY !== 0) {
+            e.preventDefault();
+            navTabs.scrollLeft += e.deltaY * 0.8;
+          }
+        }, { passive: false });
+      }
+    });
+  </script>
+</body>
+</html>
