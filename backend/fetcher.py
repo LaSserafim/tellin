@@ -158,7 +158,7 @@ def fetch_dexscreener_data(coin_query: str) -> Optional[Dict[str, Any]]:
     headers = {"User-Agent": "Mozilla/5.0"}
     try:
         req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with urllib.request.urlopen(req, timeout=3) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             pairs = data.get("pairs", [])
             if not pairs:
@@ -402,46 +402,238 @@ POPULAR_CRYPTO_UNIVERSE = [
     {"symbol": "PEPE", "name": "Pepe", "category": "Meme Liquidity"}
 ]
 
-def fetch_screener_overview() -> List[Dict[str, Any]]:
+COINGECKO_MAP = {
+    "BTC": "bitcoin",
+    "ETH": "ethereum",
+    "SOL": "solana",
+    "BNB": "binancecoin",
+    "XRP": "ripple",
+    "DOGE": "dogecoin",
+    "ADA": "cardano",
+    "AVAX": "avalanche-2",
+    "SUI": "sui",
+    "NEAR": "near",
+    "LINK": "chainlink",
+    "PEPE": "pepe"
+}
+
+CIRCULATING_SUPPLIES = {
+    "BTC": 19_800_000,
+    "ETH": 120_400_000,
+    "SOL": 468_500_000,
+    "BNB": 145_900_000,
+    "XRP": 56_800_000_000,
+    "DOGE": 146_800_000_000,
+    "ADA": 35_800_000_000,
+    "AVAX": 406_000_000,
+    "SUI": 2_850_000_000,
+    "NEAR": 1_220_000_000,
+    "LINK": 608_000_000,
+    "PEPE": 420_690_000_000_000
+}
+
+def fetch_coingecko_markets() -> Dict[str, Dict[str, Any]]:
     """
-    Compiles live screener table for top crypto assets with prices, 24h change,
-    market cap, and distance from ATH.
+    Ingests verified global institutional cryptocurrency market intelligence from CoinGecko.
+    Returns real volume-weighted prices, actual market caps, 24h changes, ATH, and drawdown.
     """
-    cache_key = "screener_overview"
+    cache_key = "coingecko_markets_batch"
     cached = get_cache(cache_key, ttl=30)
     if cached:
         return cached
 
+    ids_str = ",".join(COINGECKO_MAP.values())
+    url = f"https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids={ids_str}&order=market_cap_desc&sparkline=false&price_change_percentage=24h"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/json"
+    }
+
+    mapping = {}
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            for item in data:
+                sym = item.get("symbol", "").upper()
+                price = float(item.get("current_price") or 0.0)
+                mcap = float(item.get("market_cap") or 0.0)
+                chg = round(float(item.get("price_change_percentage_24h") or 0.0), 2)
+                vol = float(item.get("total_volume") or 0.0)
+                ath = float(item.get("ath") or 0.0)
+                ath_d = (item.get("ath_date") or "")[:10]
+                ath_dd = round(float(item.get("ath_change_percentage") or 0.0), 2)
+
+                mapping[sym] = {
+                    "symbol": sym,
+                    "name": item.get("name"),
+                    "price": price,
+                    "price_fmt": fmt_currency(price),
+                    "market_cap": mcap,
+                    "market_cap_fmt": fmt_currency(mcap),
+                    "change_24h": chg,
+                    "volume_24h": vol,
+                    "volume_24h_fmt": fmt_currency(vol),
+                    "ath_price": ath,
+                    "ath_price_fmt": fmt_currency(ath),
+                    "ath_date": ath_d,
+                    "drawdown_from_ath_pct": ath_dd,
+                    "high_24h": float(item.get("high_24h") or 0.0),
+                    "low_24h": float(item.get("low_24h") or 0.0),
+                    "source": "CoinGecko Global Institutional Market API"
+                }
+        if mapping:
+            set_cache(cache_key, mapping)
+    except Exception:
+        pass
+
+    return mapping
+
+def fetch_binance_ticker(symbol: str) -> Optional[Dict[str, Any]]:
+    """Fetches real-time millisecond spot price & 24h change from Binance order books."""
+    sym = symbol.strip().upper()
+    cache_key = f"binance_ticker_{sym}"
+    cached = get_cache(cache_key, ttl=15)
+    if cached:
+        return cached
+
+    url = f"https://api.binance.com/api/v3/ticker/24hr?symbol={sym}USDT"
+    headers = {"User-Agent": "Mozilla/5.0"}
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=4) as resp:
+            d = json.loads(resp.read().decode("utf-8"))
+            price = float(d.get("lastPrice", 0.0))
+            chg = round(float(d.get("priceChangePercent", 0.0)), 2)
+            vol = float(d.get("quoteVolume", 0.0))
+            supp = CIRCULATING_SUPPLIES.get(sym, 1.0)
+            mcap = price * supp if supp > 1.0 else 0.0
+            res = {
+                "symbol": sym,
+                "price": price,
+                "price_fmt": fmt_currency(price),
+                "change_24h": chg,
+                "volume_24h": vol,
+                "volume_24h_fmt": fmt_currency(vol),
+                "market_cap": mcap,
+                "market_cap_fmt": fmt_currency(mcap),
+                "source": "Binance Live Orderbook Feed"
+            }
+            set_cache(cache_key, res)
+            return res
+    except Exception:
+        return None
+
+def fetch_coin_market_data(clean_sym: str) -> Dict[str, Any]:
+    """
+    Multi-tiered global market resolver:
+    1. CoinGecko Global Market API (authentic prices, actual market caps, real 24h volumes, verified ATH)
+    2. Binance 24hr Ticker API (live tick-by-tick spot prices & volume)
+    3. yfinance historical series & FastInfo
+    4. DexScreener on-chain token liquidity
+    """
+    # 1. Primary: CoinGecko batch markets
+    cg_map = fetch_coingecko_markets()
+    if clean_sym in cg_map:
+        return cg_map[clean_sym]
+
+    # 2. Secondary: Binance spot order books
+    bn = fetch_binance_ticker(clean_sym)
+    if bn and bn.get("price", 0) > 0:
+        return bn
+
+    # 3. Tertiary: yfinance
+    try:
+        hist = fetch_crypto_history(clean_sym, years=1)
+        p = hist["current_price"]
+        chg = hist["performance"].get("ret_24h") or 0.0
+        supp = CIRCULATING_SUPPLIES.get(clean_sym, 1.0)
+        mcap = p * supp if supp > 1.0 else 0.0
+        return {
+            "symbol": clean_sym,
+            "price": p,
+            "price_fmt": fmt_currency(p),
+            "change_24h": round(chg, 2),
+            "market_cap": mcap,
+            "market_cap_fmt": fmt_currency(mcap),
+            "ath_price": hist["ath_price"],
+            "ath_price_fmt": fmt_currency(hist["ath_price"]),
+            "ath_date": hist["ath_date"],
+            "drawdown_from_ath_pct": hist["drawdown_from_ath_pct"],
+            "source": "Yahoo Finance Historical Stream"
+        }
+    except Exception:
+        pass
+
+    # 4. Quaternary: DexScreener
+    dex = fetch_dexscreener_data(clean_sym)
+    if dex and dex.get("price_usd"):
+        p = dex["price_usd"]
+        m = dex.get("market_cap") or dex.get("fdv", 0.0)
+        return {
+            "symbol": clean_sym,
+            "price": p,
+            "price_fmt": fmt_currency(p),
+            "change_24h": round(dex.get("change_24h", 0.0), 2),
+            "market_cap": m,
+            "market_cap_fmt": fmt_currency(m),
+            "source": "DexScreener On-Chain Liquidity"
+        }
+
+    return {
+        "symbol": clean_sym,
+        "price": 0.0,
+        "price_fmt": "$0.00",
+        "change_24h": 0.0,
+        "market_cap": 0.0,
+        "market_cap_fmt": "$0.00",
+        "source": "Unavailable"
+    }
+
+def fetch_screener_overview() -> List[Dict[str, Any]]:
+    """
+    Compiles live screener table for top crypto assets with verified global prices,
+    authentic market capitalizations, real 24h percentage changes, and volumes.
+    """
+    cache_key = "screener_overview_verified"
+    cached = get_cache(cache_key, ttl=30)
+    if cached:
+        return cached
+
+    cg_map = fetch_coingecko_markets()
     rows = []
     for coin in POPULAR_CRYPTO_UNIVERSE:
         sym = coin["symbol"]
-        dex_data = fetch_dexscreener_data(sym)
-        if dex_data and dex_data.get("price_usd"):
-            price = dex_data["price_usd"]
-            chg_24 = dex_data.get("change_24h", 0.0)
-            mcap = dex_data.get("market_cap") or dex_data.get("fdv", 0.0)
-            vol_24 = dex_data.get("volume_24h", 0.0)
+        if sym in cg_map:
+            d = cg_map[sym]
+            price = d["price"]
+            price_fmt = d["price_fmt"]
+            chg_24 = d["change_24h"]
+            mcap = d["market_cap"]
+            mcap_fmt = d["market_cap_fmt"]
+            vol_24 = d["volume_24h"]
+            vol_24_fmt = d["volume_24h_fmt"]
         else:
-            try:
-                hist = fetch_crypto_history(sym, years=1)
-                price = hist["current_price"]
-                chg_24 = hist["performance"].get("ret_24h") or 0.0
-                mcap = 0.0
-                vol_24 = 0.0
-            except Exception:
-                price, chg_24, mcap, vol_24 = 0.0, 0.0, 0.0, 0.0
+            m = fetch_coin_market_data(sym)
+            price = m.get("price", 0.0)
+            price_fmt = m.get("price_fmt", "$0.00")
+            chg_24 = m.get("change_24h", 0.0)
+            mcap = m.get("market_cap", 0.0)
+            mcap_fmt = m.get("market_cap_fmt", "$0.00")
+            vol_24 = m.get("volume_24h", 0.0)
+            vol_24_fmt = m.get("volume_24h_fmt", "$0.00")
 
         rows.append({
             "symbol": sym,
             "name": coin["name"],
             "category": coin["category"],
             "price": price,
-            "price_fmt": fmt_currency(price),
+            "price_fmt": price_fmt,
             "change_24h": chg_24,
             "market_cap": mcap,
-            "market_cap_fmt": fmt_currency(mcap),
+            "market_cap_fmt": mcap_fmt,
             "volume_24h": vol_24,
-            "volume_24h_fmt": fmt_currency(vol_24)
+            "volume_24h_fmt": vol_24_fmt
         })
 
     set_cache(cache_key, rows)

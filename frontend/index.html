@@ -1813,15 +1813,20 @@
     }
 
     function renderTelemetry(d) {
-      animateNumber("hdr_price", d.price_usd, "$", 2);
+      const p = d.price_usd || 0;
+      const dec = p < 0.0001 ? 8 : (p < 1.0 ? 4 : 2);
+      animateNumber("hdr_price", p, "$", dec);
       const chg = d.change_24h || 0;
       const chgEl = document.getElementById("hdr_change");
       chgEl.textContent = (chg >= 0 ? "+" : "") + chg.toFixed(2) + "%";
       chgEl.className = "telem-change " + (chg >= 0 ? "pos" : "neg");
 
       document.getElementById("hdr_mcap").textContent = d.market_cap_fmt || "N/A";
-      document.getElementById("hdr_ath").textContent = "$" + (d.ath_price / 1000).toFixed(1) + "K";
-      document.getElementById("hdr_ath_dd").textContent = d.drawdown_from_ath_pct.toFixed(1) + "%";
+      document.getElementById("hdr_ath").textContent = d.ath_price_fmt || (d.ath_price >= 1000 ? "$" + (d.ath_price / 1000).toFixed(1) + "K" : "$" + Number(d.ath_price || 0).toFixed(2));
+      const dd = d.drawdown_from_ath_pct !== undefined ? d.drawdown_from_ath_pct : 0;
+      const ddEl = document.getElementById("hdr_ath_dd");
+      ddEl.textContent = (dd >= 0 ? "+" : "") + dd.toFixed(1) + "%";
+      ddEl.className = dd <= 0 ? "neg" : "pos";
 
       renderPerfStrip(d.performance);
     }

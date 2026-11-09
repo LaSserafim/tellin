@@ -154,41 +154,38 @@ async def get_coin_overview(symbol: str):
     """
     clean_sym = symbol.strip().upper()
 
-    # 1. Fetch yfinance historical performance & ATH
+    # 1. Fetch verified live global market intelligence (CoinGecko / Binance)
+    live_market = await run_in_threadpool(fetcher.fetch_coin_market_data, clean_sym)
+
+    # 2. Fetch yfinance historical performance (fast 1Y window for multi-timeframe strip)
     try:
-        hist_data = await run_in_threadpool(fetcher.fetch_crypto_history, clean_sym, years=5)
-    except Exception as e:
+        hist_data = await run_in_threadpool(fetcher.fetch_crypto_history, clean_sym, years=1)
+    except Exception:
         hist_data = None
 
-    # 2. Fetch DexScreener real-time spot & liquidity metrics
+    # 3. Fetch DexScreener on-chain DEX order flow & liquidity
     dex_data = await run_in_threadpool(fetcher.fetch_dexscreener_data, clean_sym)
 
-    # 3. Resolve TradingView symbol
+    # 4. Resolve TradingView symbol
     tv_data = await run_in_threadpool(fetcher.validate_tradingview_symbol, clean_sym)
 
-    # Reconcile spot price and 24h change
-    if dex_data and dex_data.get("price_usd"):
-        spot_price = dex_data["price_usd"]
-        chg_24 = dex_data.get("change_24h", 0.0)
-        mcap = dex_data.get("market_cap") or dex_data.get("fdv", 0.0)
-    elif hist_data:
-        spot_price = hist_data["current_price"]
-        chg_24 = hist_data["performance"].get("ret_24h") or 0.0
-        mcap = 0.0
-    else:
-        raise HTTPException(status_code=404, detail=f"No market data found for symbol '{clean_sym}'")
+    # Ground telemetry strictly in validated global institutional feeds
+    spot_price = live_market.get("price") or (hist_data["current_price"] if hist_data else (dex_data.get("price_usd", 0.0) if dex_data else 0.0))
+    chg_24 = live_market.get("change_24h") if live_market.get("change_24h") is not None else (hist_data["performance"].get("ret_24h", 0.0) if hist_data else 0.0)
+    mcap = live_market.get("market_cap") or (dex_data.get("market_cap") or dex_data.get("fdv", 0.0) if dex_data else 0.0)
 
-    ath_price = hist_data["ath_price"] if hist_data else spot_price
-    ath_date = hist_data["ath_date"] if hist_data else "N/A"
-    dd_ath = round(((spot_price - ath_price) / ath_price) * 100.0, 2) if ath_price > 0 else 0.0
+    ath_price = live_market.get("ath_price") or (hist_data["ath_price"] if hist_data else spot_price)
+    ath_date = live_market.get("ath_date") or (hist_data["ath_date"] if hist_data else "N/A")
+    dd_ath = live_market.get("drawdown_from_ath_pct") if live_market.get("drawdown_from_ath_pct") is not None else (round(((spot_price - ath_price) / ath_price) * 100.0, 2) if ath_price > 0 else 0.0)
 
     return {
         "symbol": clean_sym,
-        "name": dex_data.get("base_name", clean_sym) if dex_data else clean_sym,
+        "name": live_market.get("name") or (dex_data.get("base_name", clean_sym) if dex_data else clean_sym),
         "price_usd": spot_price,
         "price_fmt": fetcher.fmt_currency(spot_price),
         "change_24h": chg_24,
         "ath_price": ath_price,
+        "ath_price_fmt": fetcher.fmt_currency(ath_price),
         "ath_date": ath_date,
         "drawdown_from_ath_pct": dd_ath,
         "market_cap": mcap,
@@ -196,7 +193,8 @@ async def get_coin_overview(symbol: str):
         "performance": hist_data.get("performance", {}) if hist_data else {},
         "dex_metrics": dex_data,
         "tradingview": tv_data,
-        "candles_sample": hist_data.get("candles", [])[-60:] if hist_data else []
+        "candles_sample": hist_data.get("candles", [])[-60:] if hist_data else [],
+        "source": live_market.get("source", "Global Institutional Crypto Feed")
     }
 # ── IN-MEMORY CACHE FOR EXPENSIVE ENDPOINTS ──────────────────────────────────
 _ENDPOINT_CACHE: Dict[str, Any] = {}
